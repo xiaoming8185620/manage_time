@@ -1,0 +1,38 @@
+.actor.player-character{width:10.8%;padding:0;border:0;background:transparent;pointer-events:auto;overflow:visible;border-radius:35%;transform:translate(-50%,-94%);transition:left var(--player-travel) linear,top var(--player-travel) linear}
+.actor.player-character:active:not(:disabled){transform:translate(-50%,-94%)}
+.player-character[aria-disabled=true]{pointer-events:none}
+.player-body{display:block;position:relative;width:100%;aspect-ratio:2/3;transform-origin:50% 94%;animation:player-breathe 4.6s ease-in-out infinite}
+.player-poses{position:absolute;inset:0;display:block;filter:drop-shadow(2px 5px 2px #51422628)}
+.player-frame{position:absolute;inset:0;display:block;overflow:hidden;opacity:0}
+.player-character .player-frame img{position:absolute;height:auto;max-width:none;filter:none}
+.player-gait{display:block;position:absolute;inset:0;opacity:0;filter:drop-shadow(2px 5px 2px #51422628)}
+.player-step{display:block;position:absolute;inset:0;overflow:hidden;opacity:0}
+.player-character .player-step img{position:absolute;max-width:none;height:auto;filter:none}
+.player-character[data-action=walk] .player-gait{opacity:1}
+.player-character[data-action=walk][data-facing=right] .player-gait{transform:scaleX(-1)}
+.player-character[data-action=walk] .player-step{animation:player-step .72s step-end infinite;animation-delay:calc(var(--step-index) * .12s)}
+.player-frame-0{opacity:1;animation:player-eyes-open 6.6s step-end infinite}
+.player-frame-1{animation:player-blink 6.6s step-end infinite}
+.player-character[data-action=wave] .player-frame-0,.player-character[data-action=wave] .player-frame-1{opacity:0;animation:none}
+.player-character[data-action=wave] .player-frame-2{animation:player-wave-out .64s step-end infinite}
+.player-character[data-action=wave] .player-frame-3{animation:player-wave-in .64s step-end infinite}
+.player-character[data-action=wave] .player-body{animation:player-hello 2.4s ease-in-out both}
+.player-character[data-action=walk] .player-body{animation:none}
+.player-character[data-action=walk] .player-poses{opacity:0}
+.player-label{position:absolute;left:50%;bottom:97%;transform:translateX(-50%);background:#fff8e9;border:1px solid #b7a482;border-radius:12px;padding:5px 9px;white-space:nowrap;font-size:max(11px,calc(15 * var(--unit)));color:#736348;opacity:0;pointer-events:none}
+.player-character:hover .player-label,.player-character:focus-visible .player-label{opacity:1}
+.player-speech{position:absolute;bottom:97%;left:50%;transform:translateX(-50%);background:#fff9ed;color:#645a47;border:1px solid #b4a381;border-radius:16px;padding:9px 14px;font-size:max(12px,calc(17 * var(--unit)));line-height:1.5;white-space:nowrap;box-shadow:0 3px 10px #473b2420;pointer-events:none}
+.player-character:has(.player-speech) .player-label{opacity:0}
+.player-character.life-paused .player-body,.player-character.life-paused .player-frame,.player-character.life-paused .player-step{animation:none!important}
+.player-character.life-paused .player-frame{opacity:0}
+.player-character.life-paused .player-frame-0{opacity:1}
+.player-character.life-paused{transition-duration:0s}
+@keyframes player-breathe{0%,100%{transform:scale(1) rotate(-.35deg)}45%{transform:scale(1.006,1.015) rotate(.35deg)}70%{transform:scale(1.003,1.006) rotate(.1deg)}}
+@keyframes player-eyes-open{0%,91%,95%,100%{opacity:1}92%,94%{opacity:0}}
+@keyframes player-blink{0%,91%,95%,100%{opacity:0}92%,94%{opacity:1}}
+@keyframes player-wave-out{0%,49.99%{opacity:1}50%,100%{opacity:0}}
+@keyframes player-wave-in{0%,49.99%{opacity:0}50%,100%{opacity:1}}
+@keyframes player-hello{0%,100%{transform:rotate(0)}20%,65%{transform:rotate(-1deg) scaleY(1.012)}42%,83%{transform:rotate(.5deg)}}
+@keyframes player-step{0%,16.666%{opacity:1}16.667%,100%{opacity:0}}
+@media(max-width:520px){.player-speech{font-size:11px;padding:7px 10px}.player-label{font-size:10px;padding:4px 7px}}
+@media(prefers-reduced-motion:reduce){.game-stage:not(.motion-opt-in) .player-character,.game-stage:not(.motion-opt-in) .player-character *{animation:none!important;transition:none!important}.game-stage:not(.motion-opt-in) .player-frame{opacity:0}.game-stage:not(.motion-opt-in) .player-frame-0{opacity:1}}

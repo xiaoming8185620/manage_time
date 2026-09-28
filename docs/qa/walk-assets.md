@@ -1,0 +1,13 @@
+# 主角行走素材
+
+2026-09-24，内置 ImageGen 生成透明 RGBA 素材。
+
+- 采用：`public/assets/boy-walk-forward.png`、`public/assets/boy-walk-reverse.png`，均 1774 × 887，三帧一行。前半、后半接成六帧，0.72 秒循环。
+- 人物身份依据：`public/assets/boy-greetings.png`。反向半步由此生成；前向半步以反向半步为唯一编辑参考，以保持脸型、服装和视角一致。
+- `boy-walk-cycle.png` 为未采用草稿：双腿相位重复且视角与当前空闲姿态不同。
+- 未做光栅裁切或像素重绘；在 `src/WalkingSprite.jsx` 中用各帧独立透明边界裁切并按骨盆、头顶与鞋底对齐。所有角色和服装仍来自 ImageGen。
+- 验证：两组透明背景、完整头手鞋、同屏单帧可见；较大抬膝与远腿通过姿态仍可在未来增加过渡帧做更细腻的润色。
+
+## 最终前半步态提示词
+
+Use case: precise-object-edit. EDIT ONLY THE LEGS AND SWINGING ARMS of this existing three-frame boy sprite sheet to create the complementary FRONT HALF walkcycle. Preserve the existing image canvas aspect ratio, threecolumns on onerow, same boy locations and size. Preserve every head, face, hair strand, eye, expression, head angle, neck, cream hood, shoulder, torso, backpack, clothing palette, lighting, hand-painted linework and camera viewpoint EXACTLY. No redesign or style change. All three figures remain facing LEFT in the EXACT SAME threequarter angle, with the EXACT SAME gentle closedmouth smile. Do not alter face or head atall. The fixed ground baselines and torso/pelvis centerpositions remain as in each sourceframe. Change only belowwaist legpose and forearm swing. LEFT FRAME: reverse the source stance so the NEAR LEG with unmistakable BIG CARGO POCKET now reaches FORWARD toward SCREEN LEFT, heel gently landing; FAR LEG with no visible pocket reaches BACKWARD toward SCREEN RIGHT with its heel raised. NEAR ARM swings BACKWARD toward SCREEN RIGHT. MIDDLE FRAME: the NEAR LEG with BIG CARGO POCKET supports body nearlyvertically beneathpelvis with soleplanted; far nopocket leg is behindbody toward RIGHT with kneebent, heel raised, beginning swing; neararm hangs loosely besidebody. RIGHT FRAME: the NEAR BIG-POCKET LEG supportsbody straightbeneathpelvis soleplanted; FAR NO-POCKET LEG swings justFORWARD toward LEFT, its knee slightlybent infront of supportleg and farshoe onlya fewcentimeters offground; neararm swingsFORWARD LEFT. Low natural walking stride, not high-knee marching or running. Each figure exactly two anatomical legs and twoarms; keep the big pocket on the SAME nearleg in everyframe, never switch pockets to imply motion. Keep overall body silhouette height, face and upperbody identical to source so sheets can alternate in one animation without faceflicker. Fullhead, hands and shoes preserved, no cropping. Genuine RGBA transparent background alpha0 outside figureantialiasing, absolutely no glow, halo, scene, ground, shadow or backgroundcolor. No grid, border, caption, numbers or watermark. Output onlythe corrected three-frame sprite sheet.

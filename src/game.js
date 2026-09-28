@@ -1,0 +1,122 @@
+import { dayKey, validDay } from '../shared/calendar.js';
+import { reduceCare, restoreCare } from '../shared/scene-care.js';
+import { reduceStory, restoreStory } from '../shared/story.js';
+import { reduceSkyRewards, restoreSkyRewards } from '../shared/sky-rewards.js';
+export const SAVE_KEY = 'miaomiao-town:v1';
+export const REWARD = 10;
+export const CATALOG = [
+  { id: 'cat-tree', name: '小乖的猫爬架', shortName: '猫爬架', cost: 10, image: '/assets/cat-tree.png', description: '一处可以跳上去、伸懒腰、晒太阳的小天地。', reaction: '小乖轻轻一跃，找到了新的晒太阳位置。' },
+  { id: 'flowerbed', name: '第一座小花圃', shortName: '小花圃', cost: 10, image: '/assets/flowerbed.png', description: '种下几朵小花，让自己的云端多一点颜色。', reaction: '小乖凑近闻了闻，尾巴轻轻晃起来。' },
+];
+export const ACHIEVEMENTS = {
+  friend: { title: '云端新朋友', detail: '和小乖打了第一个招呼。' },
+  plan: { title: '今天，由我安排', detail: '为自己安排了第一个小目标。' },
+  adjust: { title: '计划会转弯', detail: '根据真实进展，主动调整一次安排。' },
+  build: { title: '小镇的第一处改变', detail: '用自己的行动，建起一件新设施。' },
+  reflect: { title: '更了解自己的节奏', detail: '回顾了一次预计与实际用时。' },
+};
+export function initialState() {
+  return { version: 1, greeted: false, coins: 0, tasks: [], buildings: [], achievements: [], reflections: [], care: {}, storyUnlocked: [], boy: { x: 0.505, y: 0.637 }, createdAt: Date.now(), savedAt: null };
+}
+const earn = (state, id) => state.achievements.includes(id) ? state.achievements : [...state.achievements, id];
+const settle = (task, now) => ({ ...task, elapsedMs: elapsed(task, now), startedAt: null });
+export function elapsed(task, now = Date.now()) {
+  return Math.max(0, task.elapsedMs || 0) + (task.status === 'active' && task.startedAt != null ? Math.max(0, now - task.startedAt) : 0);
+}
+export function validateTask({ title, estimate, startTime, day }) {
+  if (!title?.trim()) return '给这件事起一个具体的小名字吧。';
+  if (title.trim().length > 60) return '名字请写在 60 个字以内。';
+  if (!Number.isFinite(Number(estimate)) || Number(estimate) < 1 || Number(estimate) > 240) return '预计用时可以填写 1—240 分钟。';
+  if (startTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) return '请填写有效的开始时间。';
+  if (day !== undefined && !validDay(day)) return '请填写有效的安排日期。';
+  return '';
+}
+export function gameReducer(state, action) {
+  const now = action.now ?? Date.now();
+  switch (action.type) {
+    case 'GREET': return { ...state, greeted: true, achievements: earn(state, 'friend') };
+    case 'MOVE': return { ...state, boy: action.position };
+    case 'ADD_TASK': {
+      if (validateTask(action.task) || state.tasks.some(t => t.id === action.task.id)) return state;
+      const task = { ...action.task, day: validDay(action.task.day) ? action.task.day : dayKey(now), title: action.task.title.trim(), estimate: Number(action.task.estimate), status: 'planned', elapsedMs: 0, startedAt: null, rewardClaimed: false, note: '', createdAt: now };
+      return { ...state, tasks: [...state.tasks, task], achievements: earn(state, 'plan') };
+    }
+    case 'EDIT_TASK': {
+      if (validateTask(action.task)) return state;
+      const existing = state.tasks.find(t => t.id === action.id);
+      if (!existing || existing.status === 'done') return state;
+      return { ...state, tasks: state.tasks.map(t => t.id === action.id ? { ...settle(t, now), title: action.task.title.trim(), category: action.task.category, estimate: Number(action.task.estimate), startTime: action.task.startTime, day: validDay(action.task.day) ? action.task.day : t.day, status: t.status === 'planned' ? 'planned' : 'paused' } : t), achievements: earn(state, 'adjust') };
+    }
+    case 'START_TASK': {
+      const task = state.tasks.find(t => t.id === action.id);
+      if (!task || task.status === 'done' || task.status === 'active') return state;
+      return { ...state, tasks: state.tasks.map(t => t.id === action.id ? { ...t, status: 'active', startedAt: now } : t.status === 'active' ? { ...settle(t, now), status: 'paused' } : t) };
+    }
+    case 'PAUSE_TASK': return { ...state, tasks: state.tasks.map(t => t.id === action.id && t.status === 'active' ? { ...settle(t, now), status: 'paused' } : t) };
+    case 'RECORD_TASK': {
+      const task = state.tasks.find(t => t.id === action.id);
+      if (!task || task.status === 'done' || !['done', 'partial'].includes(action.status)) return state;
+      const actualMinutes = Number(action.actualMinutes);
+      if (action.status === 'done' && (!Number.isFinite(actualMinutes) || actualMinutes < 1 || actualMinutes > 1440)) return state;
+      return { ...state, tasks: state.tasks.map(t => t.id === action.id ? { ...settle(t, now), status: action.status, actualMinutes: action.status === 'done' ? actualMinutes : null, note: (action.note || '').slice(0, 240), finishedAt: action.status === 'done' ? now : null } : t) };
+    }
+    case 'CLAIM_REWARD': {
+      const task = state.tasks.find(t => t.id === action.id);
+      if (!task || task.status !== 'done' || task.rewardClaimed) return state;
+      return { ...state, coins: state.coins + REWARD, tasks: state.tasks.map(t => t.id === action.id ? { ...t, rewardClaimed: true } : t) };
+    }
+    case 'BUILD': {
+      const item = CATALOG.find(i => i.id === action.itemId);
+      if (!item || state.coins < item.cost || !BUILD_SLOTS.some(s => s.id === action.slot) || state.buildings.some(b => b.slot === action.slot || b.itemId === action.itemId)) return state;
+      return { ...state, coins: state.coins - item.cost, buildings: [...state.buildings, { itemId: item.id, slot: action.slot, builtAt: now }], achievements: earn(state, 'build') };
+    }
+    case 'CARE_SCENE': return reduceCare(state, action, now);
+    case 'COLLECT_CRYSTAL':
+    case 'PICKUP_SKY_COIN': return reduceSkyRewards(state, action);
+    case 'UNLOCK_STORY': return reduceStory(state, action);
+    case 'REFLECT': {
+      if (!['faster', 'similar', 'longer'].includes(action.answer)) return state;
+      const task = state.tasks.find(t => t.id === action.id);
+      if (!task || task.status !== 'done' || state.reflections.some(r => r.taskId === action.id)) return state;
+      return { ...state, reflections: [...state.reflections, { taskId: action.id, answer: action.answer, at: now }], achievements: earn(state, 'reflect') };
+    }
+    case 'RESET': return initialState();
+    default: return state;
+  }
+}
+export const BUILD_SLOTS = [
+  { id: 'sunny', name: '靠近阳光的地方', x: 0.665, y: 0.555 },
+  { id: 'window', name: '小屋前的小角落', x: 0.328, y: 0.655 },
+  { id: 'garden', name: '花园旁的空地', x: 0.756, y: 0.602 },
+];
+export function serializeState(state) { return JSON.stringify({ ...state, savedAt: Date.now() }); }
+export function restoreState(raw) {
+  if (!raw) return { state: initialState(), corrupt: false };
+  try {
+    const data = JSON.parse(raw);
+    if (data.version !== 1 || typeof data.greeted !== 'boolean' || !Number.isFinite(data.coins) || data.coins < 0 || !Array.isArray(data.tasks) || !Array.isArray(data.buildings) || !Array.isArray(data.achievements)) throw new Error('Invalid save');
+    if (data.tasks.some(t => !t.id || typeof t.title !== 'string' || !['planned', 'active', 'paused', 'partial', 'done'].includes(t.status) || !Number.isFinite(t.estimate) || !Number.isFinite(t.elapsedMs))) throw new Error('Invalid tasks');
+    if (data.buildings.some(b => !CATALOG.some(i => i.id === b.itemId) || !BUILD_SLOTS.some(s => s.id === b.slot))) throw new Error('Invalid buildings');
+    return { state: { ...initialState(), ...data, skyRewards: restoreSkyRewards(data.skyRewards), storyUnlocked: restoreStory(data.storyUnlocked), care: restoreCare(data.care || {}, data.buildings), reflections: Array.isArray(data.reflections) ? data.reflections : [], boy: data.boy && Number.isFinite(data.boy.x) && Number.isFinite(data.boy.y) ? data.boy : initialState().boy }, corrupt: false };
+  } catch { return { state: initialState(), corrupt: true }; }
+}
+export function loadGame(storage) {
+  try { return restoreState(storage.getItem(SAVE_KEY)); }
+  catch { return { state: initialState(), corrupt: false, unavailable: true }; }
+}
+export function localDay(now = new Date()) {
+  return dayKey(now);
+}
+export function formatElapsed(ms) {
+  const seconds = Math.floor(Math.max(0, ms) / 1000);
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}
+const WALK_AREA = [[.32,.515],[.57,.432],[.75,.463],[.827,.558],[.725,.694],[.515,.713],[.315,.678],[.26,.594]];
+export function canWalk(x, y) {
+  let inside = false;
+  for (let i = 0, j = WALK_AREA.length - 1; i < WALK_AREA.length; j = i++) {
+    const [xi, yi] = WALK_AREA[i], [xj, yj] = WALK_AREA[j];
+    if (((yi > y) !== (yj > y)) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}

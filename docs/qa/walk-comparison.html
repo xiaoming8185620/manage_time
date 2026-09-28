@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>主角步态 · 前后对照</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:28px;background:#f3f0e7;color:#514d40;font:15px/1.6 system-ui,sans-serif}h1{font-size:24px;margin:0 0 6px}h2{font-size:17px;margin:12px 0 8px}p{margin:4px 0 18px}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:22px}figure{margin:0;background:#fffdf6;padding:12px;border:1px solid #d8d0bb;border-radius:12px}figure>img{width:100%;display:block}figcaption{margin-bottom:8px}.detail{height:215px;background-repeat:no-repeat;background-size:1280px 720px;margin:auto;width:220px}.before{background-image:url('./walk-before.jpg');background-position:-552px -185px}.after{background-image:url('./walk-left-final.jpg');background-position:-504px -207px}.demo{margin-top:22px;padding:20px;background:#fffcf3;border:1px solid #d8d0bb;border-radius:12px}.lane{height:200px;position:relative;border-bottom:1px dashed #a8aa8e}.lane .actor.player-character{position:absolute;width:110px;left:50%;top:95%;animation:none;pointer-events:none}.lane .player-body{animation:none}.demo-row{display:flex;gap:20px;align-items:center}.demo-row button{border:1px solid #b2aa91;border-radius:8px;background:white;color:inherit;padding:7px 15px;cursor:pointer}.demo[data-paused=true] .player-step{animation-play-state:paused}.note{color:#77705e;font-size:13px}@media(max-width:760px){.comparison{grid-template-columns:1fr}}
+</style></head><body>
+<h1>主角走路 · 前后对照</h1><p>相同 1280 × 720 视口、两座建筑、0 喵喵币与回顾阶段。行走位置、朝向及云猫时刻不同；场景构图与界面保持一致。</p>
+<div class="comparison">
+<figure><figcaption>之前 · 单张人物素材平移</figcaption><img src="./walk-before.jpg" alt="修改前，主角以固定姿势在甲板移动"><h2>角色局部 · 原始像素同尺度</h2><div class="detail before" role="img" aria-label="旧行走姿态局部"></div></figure>
+<figure><figcaption>现在 · 交替迈步、摆臂</figcaption><img src="./walk-left-final.jpg" alt="修改后，主角向左迈步"><h2>角色局部 · 原始像素同尺度</h2><div class="detail after" role="img" aria-label="新迈步姿态局部"></div></figure>
+</div>
+<section class="demo" id="demo"><div class="demo-row"><h2>同一渲染组件 · 六帧循环检查</h2><button id="toggle">暂停步态</button><button id="direction">转向右侧</button></div><p class="note">0.72 秒循环；透明素材按头顶、骨盆和鞋底校准。这里只固定位置以观察四肢，游戏中按距离匀速移动。</p><div class="lane" id="sprite"></div></section>
+<script type="module">
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {WalkingSprite} from '/src/WalkingSprite.jsx';
+import '/src/player-character.css';
+createRoot(document.getElementById('sprite')).render(React.createElement('div',{className:'actor player-character','data-action':'walk','data-facing':'left'},React.createElement('span',{className:'player-body'},React.createElement(WalkingSprite))));
+const demo=document.getElementById('demo');
+document.getElementById('toggle').onclick=e=>{const paused=demo.dataset.paused!=='true';demo.dataset.paused=String(paused);e.currentTarget.textContent=paused?'继续步态':'暂停步态';};
+document.getElementById('direction').onclick=e=>{const actor=document.querySelector('.player-character');const right=actor.dataset.facing!=='right';actor.dataset.facing=right?'right':'left';e.currentTarget.textContent=right?'转向左侧':'转向右侧';};
+</script></body></html>

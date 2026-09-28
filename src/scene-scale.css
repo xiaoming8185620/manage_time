@@ -1,0 +1,29 @@
+/* One orthographic scale for the 1487 × 1058 scene. Keep world artwork
+   proportional at every viewport; touch targets may grow independently. */
+.game-stage{
+  --scene-boy-width:10.8%;
+  --scene-cat-width:7.4%;
+  --scene-writer-width:26.2%;
+  --scene-inspector-width:10.5%;
+}
+.game-stage .actor.player-character{width:var(--scene-boy-width)}
+.game-stage .actor.cat-companion{width:var(--scene-cat-width)}
+.game-stage .actor.cat-companion::after{
+  content:"";position:absolute;left:50%;top:50%;
+  width:max(100%,44px);height:max(100%,44px);
+  transform:translate(-50%,-50%);
+}
+/* The book pod is in front of the main rail, including its mature vines. */
+.game-stage .writer-nook{left:.4%;width:var(--scene-writer-width);z-index:88}
+.game-stage .writer-nook-label{
+  top:94%;left:12%;transform:none;gap:6px;padding:5px 9px;
+}
+.game-stage .writer-nook-label>svg{width:16px;height:16px}
+.game-stage .writer-nook-label strong{font-size:clamp(11px,calc(16 * var(--unit)),14px)}
+.game-stage .writer-nook-label small{display:none}
+.game-stage .sky-inspector{width:var(--scene-inspector-width)}
+@media(max-width:520px){
+  .game-stage .writer-nook-label{left:5%;padding:4px 6px;gap:4px}
+  .game-stage .writer-nook-label>svg{width:13px;height:13px}
+  .game-stage .writer-nook-label strong{font-size:10px}
+}

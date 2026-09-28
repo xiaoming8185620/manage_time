@@ -1,0 +1,8 @@
+{
+  "host": "smtp.example.com",
+  "port": 465,
+  "username": "parent@example.com",
+  "password": "填写邮箱的SMTP授权码",
+  "from": "parent@example.com",
+  "recipient": ""
+}
