@@ -8,6 +8,7 @@ from .domain import Problem, initial_state, reduce_game, day_key, day_start, wee
 from .scene_care import restore_care, care_spent, care_detail
 from .story import restore_story, story_spent, story_detail
 from .sky_rewards import restore_sky_rewards, empty_sky_rewards
+from .greenhouse import restore_habitats, HABITATS
 
 
 class Store:
@@ -104,6 +105,9 @@ class Store:
                 self.event(user, now, 'UNLOCK_STORY', detail=story_detail(action))
             if action['type'] == 'PICKUP_SKY_COIN' and state != current['state']:
                 self.event(user, now, 'PICKUP_SKY_COIN', detail='拾起云晶采集掉落的 1 星球币')
+            if action['type'] == 'BUILD_HABITAT' and state != current['state']:
+                item = HABITATS[action['habitatId']]
+                self.event(user, now, 'BUILD_HABITAT', detail=f"{item['name']} · 使用 {item['cost']} 星球币 · 永久建成")
             self.write('UPDATE states SET data=?,revision=revision+1 WHERE user_id=?', (json.dumps(state), user))
             self.write('INSERT INTO operations VALUES(?,?)', (op, user))
             return self.state(user)
@@ -136,10 +140,12 @@ class Store:
                 if b['itemId'] not in ITEMS or b['slot'] not in SLOTS:
                     raise ValueError()
                 state['buildings'].append(dict(itemId=b['itemId'], slot=b['slot'], builtAt=min(float(b.get('builtAt', now)), now)))
-            state['care'] = restore_care(raw.get('care', {}), state['buildings'], now)
+            state['habitats'] = restore_habitats(raw.get('habitats', []))
+            state['care'] = restore_care(raw.get('care', {}), state['buildings'], now, state['habitats'])
             state['storyUnlocked'] = restore_story(raw.get('storyUnlocked', []))
             state['skyRewards'] = restore_sky_rewards(raw.get('skyRewards', empty_sky_rewards()))
             state['coins'] = state['skyRewards']['earned'] + 10 * sum(t['status'] == 'done' and t['rewardClaimed'] for t in state['tasks']) - 10 * len(buildings) - care_spent(state['care']) - story_spent(state['storyUnlocked'])
+            state['coins'] -= sum(HABITATS[i]['cost'] for i in state['habitats'])
             if state['coins'] < 0:
                 raise ValueError()
             state['greeted'] = bool(raw.get('greeted'))

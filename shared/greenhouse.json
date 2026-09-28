@@ -1,0 +1,18 @@
+{
+  "habitats": [
+    {"id":"parrot-perch","name":"鹦鹉的枝桠乐园","cost":10,"column":0,"x":0.395,"y":0.365,"width":0.14,"description":"添上高低栖木、饮水碗和小木环，让飞行之间多一个停留的地方。"},
+    {"id":"snake-rest","name":"小蛇的暖石休憩角","cost":10,"column":1,"x":0.655,"y":0.785,"width":0.20,"description":"一段软木洞、一碗清水和温暖的石头，留给它慢慢探索。"}
+  ],
+  "targets": [
+    {"id":"gh-broadleaf","scene":"greenhouse","name":"云扇海芋","kind":"plant","style":"gh-broadleaf","x":0.264,"y":0.458,"w":0.22,"h":0.25,"spriteWidth":0.27,"cost":3},
+    {"id":"gh-moss","scene":"greenhouse","name":"露珠苔原","kind":"plant","style":"gh-moss","x":0.23,"y":0.715,"w":0.21,"h":0.10,"spriteWidth":0.20,"cost":3},
+    {"id":"gh-vine","scene":"greenhouse","name":"星铃垂藤","kind":"plant","style":"gh-vine","x":0.762,"y":0.179,"w":0.18,"h":0.25,"spriteWidth":0.27,"cost":3},
+    {"id":"gh-flower","scene":"greenhouse","name":"珊瑚星花","kind":"plant","style":"gh-flower","x":0.827,"y":0.457,"w":0.22,"h":0.23,"spriteWidth":0.26,"cost":3},
+    {"id":"gh-shrub","scene":"greenhouse","name":"银叶小灌木","kind":"plant","style":"gh-shrub","x":0.537,"y":0.332,"w":0.20,"h":0.18,"spriteWidth":0.20,"cost":3},
+    {"id":"gh-berry","scene":"greenhouse","name":"蓝雾浆果","kind":"plant","style":"gh-berry","x":0.843,"y":0.704,"w":0.22,"h":0.20,"spriteWidth":0.27,"cost":3},
+    {"id":"gh-parrot","scene":"greenhouse","name":"鹦鹉阿羽","kind":"pet","x":0.40,"y":0.25,"w":0.09,"h":0.08,"cost":2,"spriteRow":0,"freeLabel":"和阿羽打招呼","paidLabel":"添水与梳理栖息处","description":"它喜欢穿过阳光，也喜欢停下来听你说话。免费打招呼，或者照顾它的饮水和栖息处。","reply":"阿羽扇扇翅膀：你好呀！今天也按自己的节奏来。","careReply":"饮水添好了，阿羽轻轻啄了一下木环，满意地歪了歪头。"},
+    {"id":"gh-snake","scene":"greenhouse","name":"小蛇慢慢","kind":"pet","x":0.57,"y":0.75,"w":0.13,"h":0.07,"cost":2,"spriteRow":1,"freeLabel":"安静陪慢慢一会儿","paidLabel":"添水与整理暖石","description":"慢慢是一条温顺的小蛇。给它留一点空间，它会沿着自己的路线缓缓探索。","reply":"慢慢轻轻抬起头，吐了吐信子，又安心地伏在暖木旁。","careReply":"清水和暖石准备好了，慢慢弯出一个舒展的弧线。"},
+    {"id":"gh-perch-care","scene":"greenhouse","name":"枝桠乐园","kind":"facility","habitatId":"parrot-perch","x":0.395,"y":0.365,"w":0.09,"h":0.17,"cost":2,"habitatColumn":0,"freeLabel":"看看小木环","paidLabel":"擦拭栖木","reply":"木环轻轻晃着，等阿羽下一次飞回来。","careReply":"栖木干净又平整，停下脚步也很舒服。"},
+    {"id":"gh-rest-care","scene":"greenhouse","name":"暖石休憩角","kind":"facility","habitatId":"snake-rest","x":0.655,"y":0.785,"w":0.16,"h":0.08,"cost":2,"habitatColumn":1,"freeLabel":"看看软木小洞","paidLabel":"整理休憩角","reply":"小洞里有柔软的阴影，给慢慢留一处安静。","careReply":"碎叶和水碗整理好了，暖石旁又清爽起来。"}
+  ]
+}

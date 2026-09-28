@@ -1,3 +1,4 @@
+import greenhouseSprites from './greenhouse-sprites.json' with { type:'json' };
 // Anchors are measured against the 1487 × 1058 bare scene and 627 px atlas cells.
 const LAYOUT = {
   'rail-west': [[.05,.52,.18]], 'rail-front-west': [[.182,.58,.24]],
@@ -20,13 +21,19 @@ const META = {
   canopy: { roots:[[313.5,323],[309.5,327],[319,296.5],[311.5,301.5]], bounds:[[34,148,593,498],[23,146,596,508],[23,116,615,477],[13,111,610,492]], scale:[1,1,1,1] },
 };
 export const plantLevel = count => Math.max(0, Math.min(3, Math.floor(Number(count) || 0)));
-export const plantKind = target => target.id === 'shade-tree' ? 'canopy' : target.style === 'vine' ? 'vine' : 'foliage';
+export const plantKind = target => target.scene === 'greenhouse' ? target.style : target.id === 'shade-tree' ? 'canopy' : target.style === 'vine' ? 'vine' : 'foliage';
 export function plantFrame(kind, count) {
+  if (greenhouseSprites[kind]) {
+    const level=plantLevel(count), sprite=greenhouseSprites[kind], crop=sprite.boxes[level], anchor=sprite.roots[level];
+    const root=[313.5,kind==='gh-vine'?50.16:564.3];
+    return {level,root,bounds:crop.map((v,i)=>root[i%2]+(v-anchor[i%2])/480*627),scale:1,src:`/assets/greenhouse-plants-${sprite.sheet}-v1.png`,crop,anchor};
+  }
   const level = plantLevel(count), meta = META[kind];
   return { level, root:meta.roots[level], bounds:meta.bounds[level], scale:meta.scale[level], src:`/assets/plant-${kind}-stages-v2.png`, column:level % 2, row:Math.floor(level / 2) };
 }
 export function plantParts(target, count) {
   const frame = plantFrame(plantKind(target), count);
+  if (target.scene === 'greenhouse') return [{...frame,x:target.x,y:target.y,width:target.spriteWidth}];
   const anchors = target.id === 'built-flowerbed' ? [[target.x-.026,target.floorY-.078,.075],[target.x+.014,target.floorY-.065,.08],[target.x+.037,target.floorY-.043,.065]] : LAYOUT[target.id] || [[target.x,target.y,.08]];
   return anchors.map(([x,y,width]) => ({ ...frame, x,y,width:width*frame.scale }));
 }

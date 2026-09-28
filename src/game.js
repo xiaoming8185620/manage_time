@@ -2,6 +2,7 @@ import { dayKey, validDay } from '../shared/calendar.js';
 import { reduceCare, restoreCare } from '../shared/scene-care.js';
 import { reduceStory, restoreStory } from '../shared/story.js';
 import { reduceSkyRewards, restoreSkyRewards } from '../shared/sky-rewards.js';
+import { reduceHabitat, restoreHabitats } from '../shared/greenhouse.js';
 export const SAVE_KEY = 'miaomiao-town:v1';
 export const REWARD = 10;
 export const CATALOG = [
@@ -71,6 +72,7 @@ export function gameReducer(state, action) {
       return { ...state, coins: state.coins - item.cost, buildings: [...state.buildings, { itemId: item.id, slot: action.slot, builtAt: now }], achievements: earn(state, 'build') };
     }
     case 'CARE_SCENE': return reduceCare(state, action, now);
+    case 'BUILD_HABITAT': return reduceHabitat(state, action);
     case 'COLLECT_CRYSTAL':
     case 'PICKUP_SKY_COIN': return reduceSkyRewards(state, action);
     case 'UNLOCK_STORY': return reduceStory(state, action);
@@ -97,7 +99,7 @@ export function restoreState(raw) {
     if (data.version !== 1 || typeof data.greeted !== 'boolean' || !Number.isFinite(data.coins) || data.coins < 0 || !Array.isArray(data.tasks) || !Array.isArray(data.buildings) || !Array.isArray(data.achievements)) throw new Error('Invalid save');
     if (data.tasks.some(t => !t.id || typeof t.title !== 'string' || !['planned', 'active', 'paused', 'partial', 'done'].includes(t.status) || !Number.isFinite(t.estimate) || !Number.isFinite(t.elapsedMs))) throw new Error('Invalid tasks');
     if (data.buildings.some(b => !CATALOG.some(i => i.id === b.itemId) || !BUILD_SLOTS.some(s => s.id === b.slot))) throw new Error('Invalid buildings');
-    return { state: { ...initialState(), ...data, skyRewards: restoreSkyRewards(data.skyRewards), storyUnlocked: restoreStory(data.storyUnlocked), care: restoreCare(data.care || {}, data.buildings), reflections: Array.isArray(data.reflections) ? data.reflections : [], boy: data.boy && Number.isFinite(data.boy.x) && Number.isFinite(data.boy.y) ? data.boy : initialState().boy }, corrupt: false };
+    return { state: { ...initialState(), ...data, skyRewards: restoreSkyRewards(data.skyRewards), habitats: restoreHabitats(data.habitats), storyUnlocked: restoreStory(data.storyUnlocked), care: restoreCare(data.care || {}, data.buildings, Date.now(), restoreHabitats(data.habitats)), reflections: Array.isArray(data.reflections) ? data.reflections : [], boy: data.boy && Number.isFinite(data.boy.x) && Number.isFinite(data.boy.y) ? data.boy : initialState().boy }, corrupt: false };
   } catch { return { state: initialState(), corrupt: true }; }
 }
 export function loadGame(storage) {

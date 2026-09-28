@@ -4,6 +4,8 @@ import { ACHIEVEMENTS, BUILD_SLOTS, CATALOG, REWARD, SAVE_KEY, canWalk, elapsed,
 import { CatCompanion, TownAtmosphere } from './TownLife';
 import { SkyLife } from './SkyLife';
 import { SkyCoins } from './SkyCoins';
+import { GreenhouseScene, HabitatShop } from './GreenhouseScene';
+import { canWalkGreenhouse } from '../shared/greenhouse';
 import { dropSpot } from '../shared/sky-rewards';
 import { WriterNook, StoryReader } from './WriterNook';
 import { PlayerCharacter } from './PlayerCharacter';
@@ -53,6 +55,10 @@ export function App({ cloud, onJournal }) {
   const [localState, localDispatch] = useReducer(gameReducer, boot.state);
   const state = cloud?.state || localState, dispatch = cloud?.dispatch || localDispatch;
   const [panel, setPanel] = useState(null);
+  const [scene, setScene] = useState('town');
+  const [greenBoy, setGreenBoy] = useState({x:.38,y:.60});
+  const boyPosition = scene === 'greenhouse' ? greenBoy : state.boy;
+  function movePlayer(position) { if (scene === 'greenhouse') setGreenBoy(position); else dispatch({type:'MOVE',position}); }
   const [journeyExpanded, setJourneyExpanded] = useState(false);
   const weather = useTownWeather();
   const [careHints, setCareHints] = useState(false);
@@ -114,7 +120,7 @@ export function App({ cloud, onJournal }) {
   const reflected = lastDone && state.reflections.some(r => r.taskId === lastDone.id);
 
   useEffect(() => {
-    const files = ['town-environment-bare-v2.png', 'boy-greetings.png', 'boy-walk-forward.png', 'boy-walk-reverse.png', 'xiaoguai.png', 'cat-tree.png', 'flowerbed.png', 'miaomiao-coin.png', 'title-frame.png', 'dialogue-frame.png', 'xiaoguai-trot.png', 'cloud-drift.png', 'flowerbed-bare-v2.png', 'plant-vine-stages-v2.png', 'plant-foliage-stages-v2.png', 'plant-canopy-stages-v2.png', 'watering-can-v1.png'];
+    const files = ['town-environment-bare-v2.png', 'boy-greetings.png', 'boy-walk-forward.png', 'boy-walk-reverse.png', 'xiaoguai.png', 'cat-tree.png', 'flowerbed.png', 'miaomiao-coin.png', 'title-frame.png', 'dialogue-frame.png', 'xiaoguai-trot.png', 'cloud-drift.png', 'flowerbed-bare-v2.png', 'plant-vine-stages-v2.png', 'plant-foliage-stages-v2.png', 'plant-canopy-stages-v2.png', 'watering-can-v1.png', 'greenhouse-base-v1.png', 'greenhouse-plants-a-v1.png', 'greenhouse-plants-b-v1.png', 'greenhouse-animals-v1.png', 'greenhouse-habitats-v1.png', 'greenhouse-parrot-perched-v1.png'];
     let alive = true;
     Promise.all(files.map(file => new Promise((resolve, reject) => { const im = new Image(); im.onload = resolve; im.onerror = reject; im.src = A + file; }))).then(() => alive && setReady(true)).catch(() => alive && setLoadError(true));
     return () => { alive = false; };
@@ -134,7 +140,7 @@ export function App({ cloud, onJournal }) {
   useEffect(() => () => { clearTimeout(moveTimer.current); clearTimeout(toastTimer.current); }, []);
   useLayoutEffect(() => {
     if (!lifePaused) return;
-    if (boyMotion.current) dispatch({ type: 'MOVE', position: currentBoyPosition() });
+    if (boyMotion.current) movePlayer(currentBoyPosition());
     clearTimeout(moveTimer.current);
     boyMotion.current = null;
     setWalkDuration(0);
@@ -170,8 +176,8 @@ export function App({ cloud, onJournal }) {
       carePending.current = null;
       setCareWaiting(false);
       setPanel(null);
-      setCareEffect({ id: pending.careId, target: pending.target.kind === 'pet' ? { ...pending.target, ...catPosition.current } : pending.target, verb: pending.verb });
-      if (pending.target.kind === 'pet') { setPetMood(pending.verb === 'care' ? 'groom' : 'play'); setPetSignal(value => value + 1); }
+      setCareEffect({ id: pending.careId, target: pending.target.id === 'xiaoguai' ? { ...pending.target, ...catPosition.current } : pending.target, verb: pending.verb });
+      if (pending.target.id === 'xiaoguai') { setPetMood(pending.verb === 'care' ? 'groom' : 'play'); setPetSignal(value => value + 1); }
       notify(pending.verb === 'water' ? `${pending.target.name}喝到水啦，叶子轻轻摇了摇。` : pending.verb === 'care' ? pending.target.kind === 'plant' ? `−${pending.target.cost} 星球币 · ${pending.target.name}长到「${CARE_LEVELS[record.careCount]}」，新花叶留下来了。` : `−${pending.target.cost} 星球币 · ${pending.target.careReply || `${pending.target.name}已经打理好啦。`}` : pending.target.reply || '小镇轻轻回应了你。');
     } else if (!cloud?.paused && (state !== pending.sourceState || pending.sawPause || !cloud)) {
       carePending.current = null;
@@ -186,12 +192,12 @@ export function App({ cloud, onJournal }) {
   }, [careEffect]);
   function currentBoyPosition() {
     const motion = boyMotion.current;
-    if (!motion) return state.boy;
+    if (!motion) return boyPosition;
     const progress = Math.min(1, (performance.now() - motion.start) / motion.duration);
     return { x: motion.from.x + (motion.to.x - motion.from.x) * progress, y: motion.from.y + (motion.to.y - motion.from.y) * progress };
   }
   function walkTo(x, y, force = false, onArrive) {
-    if ((!canWalk(x, y) && !force) || placement) return;
+    if ((!(scene === 'greenhouse' ? canWalkGreenhouse(x,y) : canWalk(x,y)) && !force) || placement) return;
     const from = currentBoyPosition();
     const distance = Math.hypot(x - from.x, (y - from.y) * 1058 / 1487);
     if (distance < .001) { clearTimeout(moveTimer.current); boyMotion.current = null; setMoving(false); onArrive?.(); return; }
@@ -201,7 +207,7 @@ export function App({ cloud, onJournal }) {
     clearTimeout(moveTimer.current);
     boyMotion.current = duration ? { from, to: { x, y }, start: performance.now(), duration } : null;
     setWalkDuration(duration);
-    dispatch({ type: 'MOVE', position: { x, y } });
+    movePlayer({x,y});
     setMoving(duration > 0);
     if (duration) moveTimer.current = setTimeout(() => { boyMotion.current = null; setMoving(false); onArrive?.(); }, duration);
     else onArrive?.();
@@ -218,10 +224,10 @@ export function App({ cloud, onJournal }) {
       if (changes[e.key]) { e.preventDefault(); const [dx, dy] = changes[e.key], from = currentBoyPosition(); walkTo(from.x + dx, from.y + dy); }
     }
     window.addEventListener('keydown', keys); return () => window.removeEventListener('keydown', keys);
-  }, [state.boy, state.greeted, panel, placement, ready, lifePaused]);
+  }, [boyPosition, scene, state.greeted, panel, placement, ready, lifePaused]);
   function openPlan() {
-    if (!state.greeted) { greet(); return; }
-    walkTo(.46, .535, true);
+    if (!state.greeted && scene === 'town') { greet(); return; }
+    if (scene === 'town') walkTo(.46, .535, true);
     setPanel({ type: 'plan' });
   }
   function greet() {
@@ -259,35 +265,49 @@ export function App({ cloud, onJournal }) {
     setCatVisit({ ...slot, at: Date.now() });
     setPanel({ type: 'built', itemId: item.id });
   }
+  function changeScene(next) {
+    if (!ready || cloud?.paused || panel || placement) return;
+    movePlayer(currentBoyPosition());
+    clearTimeout(moveTimer.current); boyMotion.current=null; setMoving(false); setWalkDuration(0);
+    setCareEffect(null); setCareHints(false); setJourneyExpanded(false); setToast(''); setScene(next);
+  }
   const activePanelTask = panel?.id ? state.tasks.find(t => t.id === panel.id) : null;
   const selectedItem = CATALOG.find(i => i.id === placement);
 
   return <main className="game-shell">
-    <div ref={stageRef} className={`game-stage ${placement ? 'is-placing' : ''} ${motionPreference === 'on' ? 'motion-opt-in' : ''}`} style={{ '--unit': `${stageWidth / 1487}px` }} aria-label="星球悬浮小镇，悬浮平台">
+    <div ref={stageRef} className={`game-stage ${scene === 'greenhouse' ? 'greenhouse-stage' : ''} ${placement ? 'is-placing' : ''} ${motionPreference === 'on' ? 'motion-opt-in' : ''}`} style={{ '--unit': `${stageWidth / 1487}px` }} aria-label={scene === 'greenhouse' ? '第二幕，云顶温室' : '星球悬浮小镇，悬浮平台'}>
+      {scene === 'town' && <>
       <img className="world-background" src={`${A}town-environment-bare-v2.png`} alt="云海中的生态悬浮小镇，温暖的小屋、太阳能板和一片等待建设的平台" draggable="false" />
       <TownAtmosphere paused={lifePaused} />
       <SkyLife paused={lifePaused} attempts={state.skyRewards?.attempts || 0} onCollection={attempt => dispatch({type:'COLLECT_CRYSTAL',attempt,...(!cloud ? {roll:Math.random()} : {})})} />
       <WriterNook paused={lifePaused} disabled={!ready || !!panel || !!placement} onOpen={() => setPanel({ type: 'story' })} />
+      </>}
+      {scene === 'greenhouse' && <GreenhouseScene state={state} paused={lifePaused} disabled={!!panel || !!placement || !ready} onOpen={openCare} hints={careHints && !panel} effect={!panel && pageVisible ? careEffect : null} now={now}/>}
       <div className="walk-surface" aria-label="点击木平台移动角色，也可使用方向键" onPointerDown={e => {
         if (panel || !ready) return;
         const rect = stageRef.current.getBoundingClientRect();
         walkTo((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height);
       }} />
 
+      {scene === 'town' && <>
       <button className="terminal-hotspot" aria-label="打开今日计划" onClick={openPlan}><strong className="terminal-title" aria-hidden="true">今日计划</strong><span><Notebook size={16} />今日计划</span></button>
       <SceneCareLayer state={state} onOpen={openCare} disabled={!!panel || !!placement || !ready} hints={careHints && !panel && !placement} paused={lifePaused} effect={!panel && !placement && pageVisible ? careEffect : null} now={now} />
       {state.buildings.map(b => { const item = CATALOG.find(i => i.id === b.itemId), slot = BUILD_SLOTS.find(s => s.id === b.slot); return <button key={b.itemId} className={`world-building ${b.itemId} ${freshBuilding === b.itemId ? 'just-built' : ''}`} style={{ left: `${slot.x * 100}%`, top: `${slot.y * 100}%`, zIndex: Math.round(slot.y * 100) }} aria-label={`查看${item.shortName}`} onClick={() => openCare(careTarget(`built-${b.itemId}`))}><img src={item.id === 'flowerbed' ? `${A}flowerbed-bare-v2.png` : item.image} alt={item.shortName} draggable="false" /><span className="world-label">{item.shortName}</span></button>; })}
-      <PlayerCharacter position={state.boy} moving={moving} walkDuration={walkDuration} direction={direction} paused={lifePaused} ready={ready} blocked={!!panel || !!placement || !ready} greeted={state.greeted} taskActive={!!activeTask} />
+      </>}
+      <PlayerCharacter position={boyPosition} moving={moving} walkDuration={walkDuration} direction={direction} paused={lifePaused} ready={ready} blocked={!!panel || !!placement || !ready} greeted={state.greeted} taskActive={!!activeTask} />
+      {scene === 'town' && <>
       <SkyCoins pending={state.skyRewards?.pending} paused={lifePaused} disabled={!ready || !!panel || !!placement || !!cloud?.paused} onPickup={pickupSkyCoin}/>
       <CatCompanion boy={state.boy} greeted={state.greeted} paused={lifePaused} buildings={state.buildings} petSignal={petSignal} petMood={petMood} positionRef={catPosition} visitSignal={catVisit} onPet={position => state.greeted ? performCare('interact', sceneTarget(careTarget('xiaoguai'), state, position)) : greet()} onCare={position => openCare(careTarget('xiaoguai'), position)} />
 
       <WeatherAtmosphere view={weatherView(weather.data, now)} paused={lifePaused} />
+      </>}
+      {!panel && !placement && <button className={`scene-portal ${scene === 'town' ? 'portal-to-greenhouse' : 'portal-to-town'}`} disabled={!ready || !!cloud?.paused} aria-label={scene === 'town' ? '进入第二幕：云顶温室（免费）' : '返回第一幕：星球悬浮小镇'} onClick={()=>changeScene(scene === 'town' ? 'greenhouse' : 'town')}><span>{scene === 'town' ? <>云顶温室<ArrowRight size={15}/></> : <><ArrowLeft size={15}/>回小镇</>}</span></button>}
       {!panel && !placement && <WeatherChip {...weather} now={now} onOpen={() => setPanel({ type: 'weather' })} />}
       <header className="game-hud">
-        <div className="town-sign"><PawPrint size={30} weight="fill" /><div><h1>星球悬浮小镇</h1><span>把每一小步，变成喜欢的生活</span></div><Leaf className="sign-leaf" size={23} weight="duotone" /></div>
+        <div className="town-sign"><PawPrint size={30} weight="fill" /><div><h1>{scene === 'greenhouse' ? '云顶温室' : '星球悬浮小镇'}</h1><span>把每一小步，变成喜欢的生活</span></div><Leaf className="sign-leaf" size={23} weight="duotone" /></div>
         <div className="hud-right"><button className="balance" aria-label={`星球币余额 ${state.coins}，查看背包`} onClick={() => setPanel({ type: 'bag' })}><Coin /><strong>{state.coins}</strong><span>星球币</span></button><button className="help-button motion-toggle" aria-label={motionLabel} aria-pressed={motionEnabled} title={motionLabel} onClick={() => chooseMotion(motionEnabled ? 'off' : 'on')}>{motionEnabled ? <Wind size={23} /> : <Pause size={20} />}</button><button className="help-button" aria-label="查看玩法与存档说明" onClick={() => setPanel({ type: 'help' })}><Question size={24} weight="duotone" /></button></div>
       </header>
-      <div className="day-mark"><Sun weight="duotone" size={16} />{state.buildings.length ? '云端，正慢慢长成你喜欢的样子' : localDay(new Date(state.createdAt)) === today ? '第一天 · 初到云端' : `${today.slice(5).replace('-', '月')}日 · 回到云端`}</div>
+      <div className="day-mark"><Sun weight="duotone" size={16} />{scene === 'greenhouse' ? '第二幕 · 在云端，万物慢慢生长' : state.buildings.length ? '云端，正慢慢长成你喜欢的样子' : localDay(new Date(state.createdAt)) === today ? '第一天 · 初到云端' : `${today.slice(5).replace('-', '月')}日 · 回到云端`}</div>
 
       {placement && <>
         <div className="placement-title"><MapPin size={19} />为{selectedItem.shortName}选一个位置</div>
@@ -296,17 +316,17 @@ export function App({ cloud, onJournal }) {
       </>}
 
       {!panel && !placement && <>
-        {!state.greeted ? <section className="intro-dialog paper-panel"><div className="dialog-kicker"><PawPrint weight="duotone" size={18} />你的云端故事，从这里开始</div><p>小乖在等你，和它打个招呼吧。</p><button className="primary-button intro-action" onClick={greet}><PawPrint weight="fill" size={22} />认识小乖</button></section> : <>
+        {!state.greeted && scene === 'town' ? <section className="intro-dialog paper-panel"><div className="dialog-kicker"><PawPrint weight="duotone" size={18} />你的云端故事，从这里开始</div><p>小乖在等你，和它打个招呼吧。</p><button className="primary-button intro-action" onClick={greet}><PawPrint weight="fill" size={22} />认识小乖</button></section> : <>
           <button className="journey-toggle" aria-expanded={journeyExpanded} aria-controls="journey-card" onClick={() => setJourneyExpanded(value => !value)}><Flag size={18} weight="duotone" />今天的一小步{journeyExpanded ? <X size={16} /> : <CaretRight size={16} />}</button>
           {journeyExpanded && <section id="journey-card" className="journey-card paper-panel">
             <div className="eyebrow"><Flag size={14} weight="duotone" />今天的一小步</div>
-            {activeTask ? <><strong>{activeTask.title}</strong><p>开始至今 <b>{formatElapsed(elapsed(activeTask, now))}</b></p><button className="text-button" onClick={() => setPanel({ type: 'focus', id: activeTask.id })}>回来记录进展<ArrowRight size={16} /></button></> : unclaimed ? <><strong>这个小目标，完成了</strong><p>领取星球币，让小镇发生一点变化。</p><button className="text-button" onClick={() => setPanel({ type: 'reward', id: unclaimed.id })}>领取 10 星球币<ArrowRight size={16} /></button></> : !state.tasks.some(t => taskDay(t) === today) && !unfinished ? <><strong>先安排一件想做的事</strong><p>一个小目标，就够让今天开始。</p><button className="text-button" onClick={openPlan}>打开今日计划<ArrowRight size={16} /></button></> : state.coins >= 10 && !state.buildings.length ? <><strong>为小镇添一点喜欢</strong><p>猫爬架还是小花圃？由你决定。</p><button className="text-button" onClick={() => setPanel({ type: 'build' })}>去看看建设<ArrowRight size={16} /></button></> : unfinished ? <><strong>{unfinished.title}</strong><p>{unfinished.status === 'partial' ? '已经走出了一小步，按自己的节奏继续。' : `${unfinished.startTime || '今天'} · 预计 ${unfinished.estimate} 分钟`}</p><button className="text-button" onClick={openPlan}>查看这件事<ArrowRight size={16} /></button></> : <><strong>{reflected ? '今天的成长，留在这里了' : '你已经让小镇有了变化'}</strong><p>{reflected ? '可以陪小乖逛逛，也可以安心休息。' : '回想一下，今天的用时和预计一样吗？'}</p><button className="text-button" onClick={() => setPanel({ type: reflected ? 'bag' : 'reflection', id: lastDone?.id })}>{reflected ? '看看小镇手记' : '用一句话回顾'}<ArrowRight size={16} /></button></>}
+            {activeTask ? <><strong>{activeTask.title}</strong><p>开始至今 <b>{formatElapsed(elapsed(activeTask, now))}</b></p><button className="text-button" onClick={() => setPanel({ type: 'focus', id: activeTask.id })}>回来记录进展<ArrowRight size={16} /></button></> : unclaimed ? <><strong>这个小目标，完成了</strong><p>领取星球币，让小镇发生一点变化。</p><button className="text-button" onClick={() => setPanel({ type: 'reward', id: unclaimed.id })}>领取 10 星球币<ArrowRight size={16} /></button></> : !state.tasks.some(t => taskDay(t) === today) && !unfinished ? <><strong>先安排一件想做的事</strong><p>一个小目标，就够让今天开始。</p><button className="text-button" onClick={openPlan}>打开今日计划<ArrowRight size={16} /></button></> : state.coins >= 10 && (scene === 'greenhouse' ? (state.habitats || []).length < 2 : !state.buildings.length) ? <><strong>为{scene === 'greenhouse' ? '温室' : '小镇'}添一点喜欢</strong><p>{scene === 'greenhouse' ? '枝桠乐园还是暖石休憩角？由你决定。' : '猫爬架还是小花圃？由你决定。'}</p><button className="text-button" onClick={() => setPanel({ type: scene === 'greenhouse' ? 'habitats' : 'build' })}>去看看建设<ArrowRight size={16} /></button></> : unfinished ? <><strong>{unfinished.title}</strong><p>{unfinished.status === 'partial' ? '已经走出了一小步，按自己的节奏继续。' : `${unfinished.startTime || '今天'} · 预计 ${unfinished.estimate} 分钟`}</p><button className="text-button" onClick={openPlan}>查看这件事<ArrowRight size={16} /></button></> : <><strong>{reflected ? '今天的成长，留在这里了' : '你已经让小镇有了变化'}</strong><p>{reflected ? '可以陪小乖逛逛，也可以安心休息。' : '回想一下，今天的用时和预计一样吗？'}</p><button className="text-button" onClick={() => setPanel({ type: reflected ? 'bag' : 'reflection', id: lastDone?.id })}>{reflected ? '看看小镇手记' : '用一句话回顾'}<ArrowRight size={16} /></button></>}
           </section>}
-          <nav className="bottom-nav" aria-label="小镇功能"><button onClick={openPlan}><Notebook weight="duotone" /><span>今日计划</span>{activeTask && <span className="activity-dot" />}</button><button onClick={() => setPanel({ type: 'build' })}><Hammer weight="duotone" /><span>建设</span></button><button onClick={() => setPanel({ type: 'bag' })}><Backpack weight="duotone" /><span>背包</span></button></nav>
+          <nav className="bottom-nav" aria-label="小镇功能"><button onClick={openPlan}><Notebook weight="duotone" /><span>今日计划</span>{activeTask && <span className="activity-dot" />}</button><button onClick={() => setPanel({ type: scene === 'greenhouse' ? 'habitats' : 'build' })}><Hammer weight="duotone" /><span>建设</span></button><button onClick={() => setPanel({ type: 'bag' })}><Backpack weight="duotone" /><span>背包</span></button></nav>
         </>}
         <div className="movement-hint"><Footprints size={14} />点击木平台移动 · 点花草、物件或伙伴互动</div>
       </>}
-      {!panel && !placement && <button className="secondary-button care-launch" onClick={() => setPanel({ type: 'care-directory' })}><Leaf size={18} weight="duotone" />照料小镇</button>}
+      {!panel && !placement && <button className="secondary-button care-launch" onClick={() => setPanel({ type: 'care-directory' })}><Leaf size={18} weight="duotone" />{scene === 'greenhouse' ? '照料温室' : '照料小镇'}</button>}
       {careHints && !panel && !placement && <button className="care-hints-close" onClick={() => setCareHints(false)}>收起互动标记</button>}
       {onJournal && !panel && !placement && <button className="secondary-button journal-launch" onClick={onJournal}><Notebook size={18} />成长手记</button>}
       {toast && <div className="toast" role="status"><CheckCircle size={20} weight="fill" />{toast}</div>}
@@ -315,9 +335,10 @@ export function App({ cloud, onJournal }) {
       {!ready && <div className="loading-scene"><PawPrint size={40} weight="duotone" /><h2>{loadError ? '云端暂时没有连上' : '小乖正在等你'}</h2><p>{loadError ? '场景素材没有加载完整，请重新载入。' : '正在准备你的小镇…'}</p>{loadError && <button className="primary-button" onClick={() => location.reload()}>重新载入</button>}</div>}
     </div>
 
+    {panel?.type === 'habitats' && <Dialog title="给伙伴添一个角落" eyebrow="云顶温室 · 共用星球币" icon={Leaf} onClose={()=>setPanel(null)}><HabitatShop state={state} dispatch={dispatch} busy={!!cloud?.paused}/></Dialog>}
     {panel?.type === 'weather' && <Dialog title="杭州的天空" icon={Sun} onClose={() => setPanel(null)}><WeatherDetails {...weather} now={now} /></Dialog>}
     {panel?.type === 'story' && <Dialog title="沈石溪的云端书屋" eyebrow="坐一会儿，翻开一个关于勇气的故事" icon={Notebook} className="story-dialog" onClose={() => setPanel(null)}><StoryReader state={state} dispatch={dispatch} busy={!!cloud?.paused}/></Dialog>}
-    {panel?.type === 'care-directory' && <Dialog title="照料小镇" eyebrow="一点关心，一点看得见的成长" icon={Leaf} onClose={() => setPanel(null)}><CareDirectory state={state} now={now} onOpen={openCare} onReveal={() => { setCareHints(true); setPanel(null); }} /></Dialog>}
+    {panel?.type === 'care-directory' && <Dialog title={scene === 'greenhouse' ? '照料温室' : '照料小镇'} eyebrow="一点关心，一点看得见的成长" icon={Leaf} onClose={() => setPanel(null)}><CareDirectory scene={scene} state={state} now={now} onOpen={openCare} onReveal={() => { setCareHints(true); setPanel(null); }} /></Dialog>}
     {panel?.type === 'care' && <Dialog title={panel.target.name} eyebrow="留一点时间，照顾喜欢的生活" icon={panel.target.kind === 'pet' ? PawPrint : Leaf} onClose={() => !careWaiting && setPanel(null)}><CareActions key={panel.target.id} target={panel.target} state={state} now={now} busy={careWaiting} onAction={performCare} onDirectory={() => setPanel({ type: 'care-directory' })} /></Dialog>}
     {panel?.type === 'plan' && <Dialog title={planDay === today ? '今日计划' : '这一天的安排'} eyebrow="给今天留一点自己的节奏" onClose={() => setPanel(null)}>
       <label className="plan-date-picker">安排日期<input aria-label="安排日期" type="date" value={planDay} onChange={e => e.target.value && setPlanDay(e.target.value)} /></label>

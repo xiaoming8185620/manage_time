@@ -5,6 +5,7 @@ import { dayKey } from '../shared/calendar.js';
 import { BUILD_SLOTS } from './game.js';
 import './scene-care.css';
 import { PlantGrowth, PlantPreview } from './PlantSprites';
+import { GreenhouseArt } from './GreenhouseArt';
 import { plantHitbox } from '../shared/plant-render';
 
 export function sceneTarget(target, state, position) {
@@ -15,9 +16,9 @@ export function sceneTarget(target, state, position) {
   return { ...target, x: slot?.x ?? .5, y: (slot?.y ?? .5) - .045, floorY: slot?.y ?? .5 };
 }
 const IconFor = ({ target, ...props }) => target.kind === 'plant' ? <Leaf {...props} /> : target.kind === 'pet' ? <PawPrint {...props} /> : <Wrench {...props} />;
-export function SceneCareLayer({ state, onOpen, disabled, hints, paused, effect, now }) {
+export function SceneCareLayer({ state, onOpen, disabled, hints, paused, effect, now, scene = 'town' }) {
   return <>
-    {availableCareTargets(state).map(raw => {
+    {availableCareTargets(state, scene).map(raw => {
       const target = sceneTarget(raw, state), record = careRecord(state, target.id);
       const hit = target.kind === 'plant' ? plantHitbox(target, record.careCount) : target;
       return <React.Fragment key={target.id}>
@@ -35,6 +36,7 @@ export function SceneCareLayer({ state, onOpen, disabled, hints, paused, effect,
 
 function CarePreview({ target, level }) {
   if (target.kind === 'plant') return <div className="care-preview plant-stage-preview"><PlantPreview target={target} level={level} /><span className="care-stage-label"><Leaf size={15} />{CARE_LEVELS[level]}</span></div>;
+  if (target.scene === 'greenhouse') return <div className="care-preview gh-preview"><GreenhouseArt animal={target.spriteRow} column={target.habitatColumn}/></div>;
   const separate = target.kind === 'pet' ? '/assets/xiaoguai.png' : target.itemId ? `/assets/${target.itemId}.png` : null;
   return <div className={`care-preview ${separate ? 'single-asset' : ''}`}><img className="care-preview-source" src={separate || '/assets/town-environment-bare-v2.png'} alt={target.name} style={separate ? undefined : { transform: `translate(-${target.x * 100}%, -${target.y * 100}%)` }} /></div>;
 }
@@ -46,7 +48,7 @@ export function CareActions({ target, state, busy, now, onAction, onDirectory })
   const cooled = !record.lastEvent || now - record.lastEvent.at >= 2500;
   return <div className="care-actions-content">
     <CarePreview target={target} level={level} />
-    <p className="care-description">{plant ? '浇一点水，听叶子轻轻响。花费星球币施肥、修剪，会长出更多枝叶和花朵。' : target.kind === 'pet' ? '陪伴一直免费。也可以帮小乖梳梳毛，让它舒服地伸个懒腰。' : '小镇里熟悉的物件，也值得被认真打理。点一点互动，或花一点星球币照料它。'}</p>
+    <p className="care-description">{target.description || (plant ? '浇一点水，听叶子轻轻响。花费星球币施肥、修剪，会长出更多枝叶和花朵。' : target.kind === 'pet' ? '陪伴一直免费。也可以帮小乖梳梳毛，让它舒服地伸个懒腰。' : '小镇里熟悉的物件，也值得被认真打理。点一点互动，或花一点星球币照料它。')}</p>
     {plant && <ol className="growth-steps" aria-label={`成长阶段：${CARE_LEVELS[level]}`}>{CARE_LEVELS.map((name, index) => <li key={name} className={index <= level ? 'reached' : ''} aria-current={index === level ? 'step' : undefined}><Leaf size={16} weight={index <= level ? 'fill' : 'regular'} /><span>{name}</span></li>)}</ol>}
     <div className="care-wallet"><span>我的星球币</span><strong><img src="/assets/miaomiao-coin.png" alt="" />{state.coins}</strong></div>
     {confirm ? <section className="care-confirm" aria-label="确认照料费用"><h3>{plant ? `让花草长到「${CARE_LEVELS[Math.min(3, level + 1)]}」` : target.paidLabel}</h3><p>使用 <strong>{target.cost} 星球币</strong>，余额将变为 <strong>{Math.max(0, state.coins - target.cost)}</strong>。</p>{plant && <p>新增花叶会一直保留，换设备也能看到。</p>}<div className="care-confirm-buttons"><button className="secondary-button" disabled={busy} onClick={() => setConfirm(false)}>先不花币</button><button className="primary-button" disabled={busy || !!reason} onClick={() => onAction('care')}>{busy ? '正在照料…' : `确认照料 · ${target.cost} 星球币`}</button></div>{reason && <p className="care-status" role="status">{reason}</p>}</section> : <>
@@ -59,9 +61,9 @@ export function CareActions({ target, state, busy, now, onAction, onDirectory })
   </div>;
 }
 
-export function CareDirectory({ state, onOpen, onReveal, now }) {
+export function CareDirectory({ state, onOpen, onReveal, now, scene = 'town' }) {
   const [group, setGroup] = useState('plant');
-  const targets = availableCareTargets(state), groups = [['plant','花草',Leaf],['pet','小乖',PawPrint],['facility','设施',Wrench]];
+  const targets = availableCareTargets(state, scene), groups = [['plant','花草',Leaf],['pet',scene === 'greenhouse' ? '动物' : '小乖',PawPrint],['facility','设施',Wrench]];
   return <>
     <p className="care-description">投入哪里，哪里就慢慢成长。也可以直接点场景里的花草和物件。</p>
     <div className="care-wallet"><span>我的星球币<small>累计用于照料 {careSpent(state.care)} 币</small></span><strong><img src="/assets/miaomiao-coin.png" alt="" />{state.coins}</strong></div>

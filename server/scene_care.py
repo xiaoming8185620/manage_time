@@ -3,8 +3,10 @@ import copy
 import json
 import math
 from pathlib import Path
+from .greenhouse import CATALOGUE
 
 TARGETS = {t['id']: t for t in json.loads((Path(__file__).resolve().parents[1] / 'shared' / 'scene-care.json').read_text())}
+TARGETS.update({t['id']: t for t in CATALOGUE['targets']})
 LEVELS = ('初生', '舒展', '繁茂', '盛放')
 
 
@@ -19,6 +21,8 @@ def reduce_care(state, action, now, day_key):
         raise ValueError('照料操作格式不正确。')
     if target.get('itemId') and not any(b['itemId'] == target['itemId'] for b in state['buildings']):
         raise ValueError('先建好这处小天地，再来照料。')
+    if target.get('habitatId') and target['habitatId'] not in state.get('habitats', []):
+        raise ValueError('先建好这处栖息地，再来照料。')
     if (verb == 'water' and target['kind'] != 'plant') or (verb == 'interact' and target['kind'] == 'plant'):
         raise ValueError('这处场景不支持这个动作。')
     record = record_for(state, target_id)
@@ -45,7 +49,7 @@ def reduce_care(state, action, now, day_key):
     return state
 
 
-def restore_care(raw, buildings, now):
+def restore_care(raw, buildings, now, habitats=()):
     if not isinstance(raw, dict):
         raise ValueError('照料记录不正确。')
     result = {}
@@ -53,6 +57,8 @@ def restore_care(raw, buildings, now):
         target = TARGETS.get(target_id)
         if not target or not isinstance(source, dict) or (target.get('itemId') and not any(b['itemId'] == target['itemId'] for b in buildings)):
             raise ValueError('照料对象不正确。')
+        if target.get('habitatId') and target['habitatId'] not in habitats:
+            raise ValueError('栖息地照料记录不正确。')
         record = record_for({'care': {target_id: copy.deepcopy(source)}}, target_id)
         for key in ('careCount', 'waterCount', 'interactionCount'):
             if type(record[key]) is not int or not 0 <= record[key] <= 100000:

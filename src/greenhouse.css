@@ -1,0 +1,30 @@
+.scene-portal{position:absolute;z-index:96;min-width:44px;min-height:44px;background:transparent;border:0;border-radius:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.scene-portal span{display:flex;align-items:center;gap:5px;white-space:nowrap;background:#fff7e6ed;color:#675e43;border:1px solid #a69974;border-radius:18px;padding:8px 11px;font-size:clamp(11px,calc(16 * var(--unit)),15px);box-shadow:0 3px 10px #3c514025}
+.scene-portal:hover span,.scene-portal:focus-visible span{background:#fffff3;outline:2px solid #b4c792;outline-offset:2px}
+.portal-to-greenhouse{right:0;top:50%;width:10%;height:14%}.portal-to-greenhouse span{position:absolute;right:5%;top:100%}
+.portal-to-town{left:1%;top:34%;width:13%;height:19%}.portal-to-town span{position:absolute;left:6%;top:100%}
+.greenhouse-stage .walk-surface{clip-path:polygon(15% 53%,32% 53%,32% 45%,72% 45%,72% 74%,61% 74%,61% 88%,36% 88%,36% 74%,32% 74%,32% 63%,15% 63%)}
+.greenhouse-stage .actor.player-character{width:8.5%}
+.greenhouse-stage .care-launch{top:auto;bottom:16%}
+.greenhouse-stage .journal-launch{top:auto;bottom:24%}
+.greenhouse-stage .plant-cell{filter:saturate(.85) brightness(.98)}
+.greenhouse-art{display:block;position:relative;width:100%;overflow:hidden;pointer-events:none}
+.greenhouse-art img{position:absolute;top:0;max-width:none;height:auto;pointer-events:none;user-select:none}
+.greenhouse-habitat{position:absolute;transform:translate(-50%,-85%);pointer-events:none}
+.greenhouse-animal{position:absolute;transform:translate(-50%,-65%);background:none;border:0;padding:0;min-width:44px;min-height:44px;cursor:pointer;overflow:visible}
+.greenhouse-parrot{width:8%}.greenhouse-snake{width:12%}
+.greenhouse-parrot.parrot-perched{width:6%;transform:translate(-50%,-62%)}
+.perched-parrot{display:block;width:100%;pointer-events:none}
+.animal-response{display:block;animation:animal-hello 1.6s ease-in-out 2}
+@keyframes animal-hello{50%{transform:translateY(-3px) rotate(-3deg)}}
+.greenhouse-animal::after{content:'';position:absolute;inset:0;min-height:44px;min-width:44px}
+.greenhouse-animal:disabled{cursor:default}.animal-facing{display:block;filter:drop-shadow(0 3px 3px #435b3d25)}
+.animal-name{position:absolute;left:50%;bottom:92%;transform:translateX(-50%);white-space:nowrap;background:#fff8e9;border:1px solid #c6bba1;border-radius:14px;padding:4px 9px;font-size:12px;opacity:0;pointer-events:none}
+.greenhouse-animal:hover .animal-name,.greenhouse-animal:focus-visible .animal-name{opacity:1}
+.animal-reply{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);width:210px;max-width:65vw;background:#fff9ecf5;color:#655c48;padding:10px 13px;border:1px solid #b8b392;border-radius:15px;font-size:12px;line-height:1.7;box-shadow:0 4px 15px #3f5d3620;pointer-events:none}
+.greenhouse-light{position:absolute;inset:0;z-index:3;pointer-events:none;background:linear-gradient(118deg,transparent 25%,#fffbc713 33%,transparent 44%);animation:greenhouse-light 12s ease-in-out infinite alternate}
+@keyframes greenhouse-light{to{opacity:.35}}
+.habitat-card{padding:18px 0;border-bottom:1px solid #e1dbc8}.habitat-preview{width:175px;margin:0 auto}.habitat-card h3{font-size:17px;margin:10px 0}.habitat-card p{font-size:13px;line-height:1.8;color:#7f745d;margin:10px 0}.habitat-owned{display:flex;align-items:center;gap:6px;color:#597e51;font-size:13px}.habitat-confirm .primary-button{width:100%}
+.care-preview .greenhouse-art{width:150px;margin:0 auto}.care-preview.gh-preview{display:flex;align-items:center;justify-content:center;background:#e9ecdf}
+.greenhouse-stage .scene-care-hotspot{z-index:81!important}
+@container(max-width:600px){.portal-to-greenhouse span,.portal-to-town span{font-size:10px;padding:6px}.greenhouse-parrot{width:9%}.greenhouse-snake{width:14%}.animal-reply{width:160px;font-size:11px}}

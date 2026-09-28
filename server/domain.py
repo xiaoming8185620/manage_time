@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from .scene_care import reduce_care
 from .story import unlock_story
 from .sky_rewards import reduce_sky_rewards
+from .greenhouse import build_habitat
 
 TZ = timezone(timedelta(hours=8))
 CATEGORIES = ('学习', '运动', '社交', '生活', '休息')
@@ -158,6 +159,11 @@ def reduce_game(original, action, now):
             raise Problem(str(error))
     elif kind in ('COLLECT_CRYSTAL', 'PICKUP_SKY_COIN'):
         state = reduce_sky_rewards(state, action)
+    elif kind == 'BUILD_HABITAT':
+        try:
+            state = build_habitat(state, action)
+        except ValueError as error:
+            raise Problem(str(error))
     elif kind == 'REFLECT':
         answer = action.get('answer')
         if task and task['status'] == 'done' and answer in ('faster', 'similar', 'longer') and not any(r['taskId'] == task['id'] for r in state['reflections']):
