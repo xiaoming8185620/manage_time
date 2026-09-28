@@ -11,7 +11,7 @@ python3 -m pip install -r requirements.txt
 python3 app.py
 ```
 
-先在服务器 Mac 打开 `http://localhost:4180` 输入孩子名字，再在其他设备访问 `http://旧Mac的局域网IP:4180`。Python 使用已构建的 `dist/family`；修改前端后执行 `npm run build:family`。
+先在服务器 Mac 打开 `http://localhost:4180` 输入孩子名字，再在其他设备访问 `http://旧Mac的局域网IP:4180`。Python 使用随代码提交的 `dist/family`，拉取后无需安装 Node 或重新构建。修改前端后执行 `npm run build:family`，并将更新后的网页一起提交。
 
 配置、迁移、备份和统计口径见 [家庭版使用说明](docs/family-server.md)。SMTP 尚未配置时不会发信，页面会显示配置状态。`npm run dev` 继续保留原来的单机原型。
 

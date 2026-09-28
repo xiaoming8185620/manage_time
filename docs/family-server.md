@@ -21,7 +21,7 @@ python3 app.py --host 0.0.0.0 --port 4180 --data-dir data/family
 
 这是家庭局域网服务，没有配置公网转发或域名。HTTP 适用于本轮选择的可信家庭网络；若以后开放到外网，需要另外配置 HTTPS 和访问入口。Mac 必须保持运行、网络连通；休眠或关机时其他设备无法访问，邮件也会延迟到恢复运行后。未改动 Mac 的休眠设置或安装开机启动项。
 
-Python 直接提供 `dist/family` 中已构建的页面，不需要同时运行 Node 服务。**修改前端源码后**，才需要在开发电脑重新执行：
+Python 直接提供 `dist/family` 中已构建的页面，该目录随 Git 代码提交。旧 Mac 拉取对应分支后，只需安装 Python 依赖，不需要安装 Node 或单独复制网页文件。**修改前端源码后**，在开发电脑重新执行并提交更新后的 `dist/family`：
 
 ```sh
 npm run build:family
