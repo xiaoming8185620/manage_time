@@ -69,6 +69,17 @@ test('invalid save is surfaced, not silently accepted as a valid town', () => {
   assert.equal(restoreState(JSON.stringify({ version: 1 })).corrupt, true);
   assert.equal(restoreState(null).corrupt, false);
 });
+test('malformed local tasks and duplicate buildings are rejected before rendering', () => {
+  const base=withTask();
+  for (const override of [{createdAt:'not-a-date'},{day:'2026-02-30'},{rewardClaimed:'false'},{status:'active',startedAt:'yesterday'},{estimate:-1},{note:{}},{category:{}}]) {
+    const raw={...base,tasks:[{...base.tasks[0],...override}]};
+    assert.equal(restoreState(JSON.stringify(raw)).corrupt,true,JSON.stringify(override));
+  }
+  assert.equal(restoreState(JSON.stringify({...base,tasks:[base.tasks[0],base.tasks[0]]})).corrupt,true);
+  const buildings=[{itemId:'flowerbed',slot:'sunny',builtAt:1000},{itemId:'cat-tree',slot:'sunny',builtAt:1000}];
+  assert.equal(restoreState(JSON.stringify({...base,buildings})).corrupt,true);
+  assert.equal(restoreState(JSON.stringify({...base,reflections:[null]})).corrupt,true);
+});
 test('specific task, valid estimates, clock fields and actual time are required', () => {
   assert.ok(validateTask({ ...task, title: '   ' }));
   assert.ok(validateTask({ ...task, estimate: 0 }));

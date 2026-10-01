@@ -8,6 +8,11 @@ export function restoreSkyRewards(value = emptySkyRewards()) {
   return {attempts:value.attempts,earned:value.earned,pending:[...value.pending]};
 }
 export function skyResumeTime(attempts) { return attempts ? COLLECTION_ENDS[(attempts - 1) % 2] + 1 : 0; }
+export function reconcileSkyClock(time, completed, saved) {
+  // Called after a save pause: cancelled/rejected trials must use the server's
+  // sequence again, while a successful save must not rewind the current visit.
+  return saved !== completed ? {time:skyResumeTime(saved),completed:saved} : {time,completed};
+}
 export function crossedCollection(before, after, attempts) {
   const end = COLLECTION_ENDS[attempts % 2];
   return after < before ? end > before || end <= after : before < end && after >= end;

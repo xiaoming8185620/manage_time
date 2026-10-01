@@ -1,4 +1,5 @@
 import json
+import math
 import sqlite3
 import threading
 import uuid
@@ -9,6 +10,8 @@ from .scene_care import restore_care, care_spent, care_detail
 from .story import restore_story, story_spent, story_detail
 from .sky_rewards import restore_sky_rewards, empty_sky_rewards
 from .greenhouse import restore_habitats, HABITATS
+from .workshop_growth import restore_growth,growth_spent,growth_detail
+from .animal_rewards import restore_animal_rewards, empty_animal_rewards, ANIMALS
 
 
 class Store:
@@ -99,12 +102,18 @@ class Store:
                     self.event(user, now, kind, task)
             if action['type'] in ('GREET', 'BUILD', 'REFLECT') and state != current['state']:
                 self.event(user, now, action['type'], detail=action.get('itemId') or action.get('answer'))
+            if action['type'] in ('UPGRADE_WORKSHOP','INTERACT_WORKSHOP') and state != current['state']:
+                self.event(user,now,action['type'],detail=growth_detail(action,state))
             if action['type'] == 'CARE_SCENE' and state != current['state']:
                 self.event(user, now, 'CARE_SCENE', detail=care_detail(action, state))
             if action['type'] == 'UNLOCK_STORY' and state != current['state']:
                 self.event(user, now, 'UNLOCK_STORY', detail=story_detail(action))
             if action['type'] == 'PICKUP_SKY_COIN' and state != current['state']:
                 self.event(user, now, 'PICKUP_SKY_COIN', detail='拾起云晶采集掉落的 1 星球币')
+            if action['type'] == 'PICKUP_ANIMAL_COIN' and state != current['state']:
+                coin = next(c for c in current['state']['animalRewards']['pending'] if c['id'] == action['id'])
+                name = ANIMALS[coin['animal']]['name']
+                self.event(user, now, 'PICKUP_ANIMAL_COIN', detail=f'拾起{name}留下的 1 星球币')
             if action['type'] == 'BUILD_HABITAT' and state != current['state']:
                 item = HABITATS[action['habitatId']]
                 self.event(user, now, 'BUILD_HABITAT', detail=f"{item['name']} · 使用 {item['cost']} 星球币 · 永久建成")
@@ -116,19 +125,23 @@ class Store:
         if not isinstance(raw, dict) or raw.get('version') != 1 or not isinstance(raw.get('tasks'), list) or len(raw['tasks']) > 2000:
             raise Problem('这份存档无法读取。')
         state = initial_state(now)
+        def number(value, low=0, high=now):
+            if type(value) not in (int, float) or not math.isfinite(value) or not low <= value <= high:
+                raise ValueError()
+            return value
         try:
             for source in raw['tasks']:
                 if source['status'] not in STATUSES or not isinstance(source['id'], str) or not 1 <= len(source['id']) <= 80:
                     raise ValueError()
-                created = source.get('createdAt', now)
-                if not isinstance(created, (int, float)) or not 0 <= created <= now:
+                created = number(source.get('createdAt', now))
+                claimed = source.get('rewardClaimed', False)
+                if not isinstance(claimed, bool) or (claimed and source['status'] != 'done'):
                     raise ValueError()
-                t = {**task_input({**source, 'day': source.get('day') or day_key(created)}, now), 'id': source['id'], 'createdAt': created, 'status': 'paused' if source['status'] == 'active' else source['status'], 'startedAt': None, 'elapsedMs': max(0, min(float(source.get('elapsedMs', 0)), 31536000000)), 'rewardClaimed': bool(source.get('rewardClaimed')), 'note': str(source.get('note', ''))[:240], 'imported': True}
+                elapsed = number(source.get('elapsedMs', 0), high=9007199254740991)
+                t = {**task_input({**source, 'day': source.get('day') or day_key(created)}, now), 'id': source['id'], 'createdAt': created, 'status': 'paused' if source['status'] == 'active' else source['status'], 'startedAt': None, 'elapsedMs': min(elapsed, 31536000000), 'rewardClaimed': claimed, 'note': str(source.get('note', ''))[:240], 'imported': True}
                 if t['status'] == 'done':
-                    actual = source['actualMinutes']
-                    finished = source['finishedAt']
-                    if not isinstance(actual, (int, float)) or not 1 <= actual <= 1440 or not isinstance(finished, (int, float)) or not created <= finished <= now:
-                        raise ValueError()
+                    actual = number(source['actualMinutes'], 1, 1440)
+                    finished = number(source['finishedAt'], created)
                     t.update(actualMinutes=actual, finishedAt=finished)
                 if any(existing['id'] == t['id'] for existing in state['tasks']):
                     raise ValueError()
@@ -139,13 +152,15 @@ class Store:
             for b in buildings:
                 if b['itemId'] not in ITEMS or b['slot'] not in SLOTS:
                     raise ValueError()
-                state['buildings'].append(dict(itemId=b['itemId'], slot=b['slot'], builtAt=min(float(b.get('builtAt', now)), now)))
+                state['buildings'].append(dict(itemId=b['itemId'], slot=b['slot'], builtAt=number(b.get('builtAt', now))))
             state['habitats'] = restore_habitats(raw.get('habitats', []))
             state['care'] = restore_care(raw.get('care', {}), state['buildings'], now, state['habitats'])
+            state['workshopGrowth']=restore_growth(raw.get('workshopGrowth',{}),state['habitats'],now)
             state['storyUnlocked'] = restore_story(raw.get('storyUnlocked', []))
             state['skyRewards'] = restore_sky_rewards(raw.get('skyRewards', empty_sky_rewards()))
-            state['coins'] = state['skyRewards']['earned'] + 10 * sum(t['status'] == 'done' and t['rewardClaimed'] for t in state['tasks']) - 10 * len(buildings) - care_spent(state['care']) - story_spent(state['storyUnlocked'])
-            state['coins'] -= sum(HABITATS[i]['cost'] for i in state['habitats'])
+            state['animalRewards'] = restore_animal_rewards(raw.get('animalRewards', empty_animal_rewards()))
+            state['coins'] = state['animalRewards']['earned'] + state['skyRewards']['earned'] + 10 * sum(t['status'] == 'done' and t['rewardClaimed'] for t in state['tasks']) - 10 * len(buildings) - care_spent(state['care']) - story_spent(state['storyUnlocked'])
+            state['coins'] -= sum(HABITATS[i]['cost'] for i in state['habitats']) + growth_spent(state)
             if state['coins'] < 0:
                 raise ValueError()
             state['greeted'] = bool(raw.get('greeted'))

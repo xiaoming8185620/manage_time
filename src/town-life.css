@@ -9,7 +9,7 @@
 .cloud-low{width:33%;left:-30%;top:87%;opacity:.55;animation:cloud-under 74s linear infinite;animation-delay:-53s}
 .breeze-plant{position:absolute;height:auto;transform:translate(-50%,-95%) rotate(var(--lean));transform-origin:50% 95%}
 .breeze-plant img{display:block;width:100%;height:auto;transform-origin:50% 95%;animation:leaves-in-wind var(--wind-speed) ease-in-out infinite;animation-delay:var(--wind-delay)}
-.life-paused *{animation-play-state:paused!important}
+.life-paused,.life-paused *{animation-play-state:paused!important}
 .motion-toggle[aria-pressed=true]{color:#5d7953}
 .motion-toggle[aria-pressed=false]{color:#8c795d;background:#f2e6cf}
 .actor.cat-companion{transition-property:left,top;transition-duration:var(--cat-travel);transition-timing-function:linear;overflow:visible}

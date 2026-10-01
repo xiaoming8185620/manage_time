@@ -6,6 +6,7 @@
   --scene-writer-width:26.2%;
   --scene-inspector-width:10.5%;
 }
+.game-stage.greenhouse-stage{--scene-boy-width:8.5%}
 .game-stage .actor.player-character{width:var(--scene-boy-width)}
 .game-stage .actor.cat-companion{width:var(--scene-cat-width)}
 .game-stage .actor.cat-companion::after{

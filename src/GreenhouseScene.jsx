@@ -4,14 +4,41 @@ import { HABITATS, greenhouseAnimalAt } from '../shared/greenhouse';
 import { careTarget, careRecord } from '../shared/scene-care';
 import { SceneCareLayer } from './SceneCare';
 import './greenhouse.css';
+import { ANIMALS, animalResumeTime, animalTrialDue } from '../shared/animal-rewards';
 import { GreenhouseArt } from './GreenhouseArt';
 
-export function GreenhouseScene({ state, paused, disabled, onOpen, hints, effect, now }) {
-  const clock=useRef(0), [time,setTime]=useState(0);
+export function GreenhouseScene({ state, paused, disabled, onOpen, hints, effect, now, onAnimalDrop }) {
+  const completed=useRef(Object.fromEntries(ANIMALS.map(a=>[a.id,state.animalRewards?.attempts[a.id]||0])));
+  const clocks=useRef(Object.fromEntries(ANIMALS.map(a=>[a.id,animalResumeTime(a.id,completed.current[a.id])])));
+  const [times,setTimes]=useState({...clocks.current});
+  const callback=useRef(onAnimalDrop); callback.current=onAnimalDrop;
+  useEffect(()=>{
+    for(const a of ANIMALS){
+      const saved=state.animalRewards?.attempts[a.id]||0;
+      if(saved>completed.current[a.id]){completed.current[a.id]=saved;clocks.current[a.id]=animalResumeTime(a.id,saved);}
+    }
+    setTimes({...clocks.current});
+  },[state.animalRewards?.attempts]);
   useEffect(()=>{
     if(paused)return;
+    // A cancelled or rejected household save must not skip this animal's trial forever.
+    for(const a of ANIMALS){
+      const saved=state.animalRewards?.attempts[a.id]||0;
+      if(saved<completed.current[a.id]){completed.current[a.id]=saved;clocks.current[a.id]=animalResumeTime(a.id,saved);}
+    }
     let frame,last,painted=0;
-    const tick=t=>{if(last!==undefined)clock.current+=Math.max(0,Math.min(100,t-last));last=t;if(t-painted>=40){setTime(clock.current);painted=t;}frame=requestAnimationFrame(tick);};
+    const tick=t=>{
+      const delta=last===undefined?0:Math.max(0,Math.min(100,t-last));last=t;
+      for(const a of ANIMALS){
+        clocks.current[a.id]+=delta;
+        if(callback.current && animalTrialDue(a.id,clocks.current[a.id],completed.current[a.id])){
+          // One command per frame, so household saves cannot swallow a second source.
+          completed.current[a.id]+=1; callback.current(a.id,completed.current[a.id]);break;
+        }
+      }
+      if(t-painted>=40){setTimes({...clocks.current});painted=t;}
+      frame=requestAnimationFrame(tick);
+    };
     frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);
   },[paused]);
   return <>
@@ -20,7 +47,7 @@ export function GreenhouseScene({ state, paused, disabled, onOpen, hints, effect
     <SceneCareLayer scene="greenhouse" state={state} paused={paused} disabled={disabled} onOpen={onOpen} hints={hints} effect={effect} now={now}/>
     {HABITATS.filter(item=>state.habitats?.includes(item.id)).map(item=><div className="greenhouse-habitat" key={item.id} style={{left:`${item.x*100}%`,top:`${item.y*100}%`,width:`${item.width*100}%`,zIndex:Math.round(item.y*100)}}><GreenhouseArt column={item.column}/></div>)}
     {['gh-parrot','gh-snake'].map((id,index)=>{
-      const point=greenhouseAnimalAt(id,time,state.habitats), target=careTarget(id), event=careRecord(state,id).lastEvent;
+      const point=greenhouseAnimalAt(id,times[id],state.habitats), target=careTarget(id), event=careRecord(state,id).lastEvent;
       const reply=event && now-event.at<5000;
       return <button key={id} className={`greenhouse-animal ${index?'greenhouse-snake':'greenhouse-parrot'} ${!index&&point.rest?'parrot-perched':''} ${paused?'life-paused':''}`} data-phase={point.rest?'resting':index?'slithering':'flying'} data-frame={point.frame} style={{left:`${point.x*100}%`,top:`${point.y*100}%`,zIndex:index?89:92}} aria-label={`和${target.name}互动`} disabled={disabled} onClick={()=>onOpen({...target,x:point.x,y:point.y})}>
         <span className="animal-facing" style={{transform:point.facing==='left'?'scaleX(-1)':undefined}}><span className={reply?'animal-response':''}>{!index&&point.rest?<img className="perched-parrot" src="/assets/greenhouse-parrot-perched-v1.png" alt="" draggable="false"/>:<GreenhouseArt animal={index} frame={point.frame}/>}</span></span>

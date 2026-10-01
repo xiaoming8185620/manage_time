@@ -29,7 +29,7 @@ def create_app(data_dir, client_dir, config_path, clock=None, weather_fetcher=No
 
     @app.before_request
     def guard():
-        host = request.host.split(':')[0].lower()
+        host = (urlsplit(request.host_url).hostname or '').lower()
         try:
             local_host = ipaddress.ip_address(host).is_private
         except ValueError:
@@ -228,7 +228,9 @@ def create_app(data_dir, client_dir, config_path, clock=None, weather_fetcher=No
             raise Problem('这份周报暂时无需重发。')
         if report['mail_status'] == 'unknown' and body().get('confirmPossibleDuplicate') is not True:
             raise Problem('上次发送结果未知，请先检查收件箱，再确认重试。')
-        store.write("UPDATE reports SET mail_status='pending',attempts=0,attempted_at=NULL WHERE id=?", (identifier,))
+        updated = store.write("UPDATE reports SET mail_status='pending',attempts=0,attempted_at=NULL WHERE id=? AND mail_status=?", (identifier, report['mail_status']))
+        if not updated.rowcount:
+            raise Problem('发送状态已经更新，请刷新投递记录后查看。', 409)
         return jsonify(ok=True)
 
     @app.get('/api/export')

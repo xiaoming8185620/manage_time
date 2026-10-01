@@ -4,7 +4,6 @@
 .portal-to-greenhouse{right:0;top:50%;width:10%;height:14%}.portal-to-greenhouse span{position:absolute;right:5%;top:100%}
 .portal-to-town{left:1%;top:34%;width:13%;height:19%}.portal-to-town span{position:absolute;left:6%;top:100%}
 .greenhouse-stage .walk-surface{clip-path:polygon(15% 53%,32% 53%,32% 45%,72% 45%,72% 74%,61% 74%,61% 88%,36% 88%,36% 74%,32% 74%,32% 63%,15% 63%)}
-.greenhouse-stage .actor.player-character{width:8.5%}
 .greenhouse-stage .care-launch{top:auto;bottom:16%}
 .greenhouse-stage .journal-launch{top:auto;bottom:24%}
 .greenhouse-stage .plant-cell{filter:saturate(.85) brightness(.98)}

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Scan, Sparkle } from '@phosphor-icons/react';
 import { advanceSkyClock, skyVisitorsAt } from '../shared/sky-life';
-import { crossedCollection, skyResumeTime } from '../shared/sky-rewards';
+import { crossedCollection, skyResumeTime, reconcileSkyClock } from '../shared/sky-rewards';
 import './sky-life.css';
 
 function Visitor({ visitor }) {
@@ -46,6 +46,10 @@ export function SkyLife({ paused, attempts = 0, onCollection }) {
   }, [attempts]);
   useEffect(() => {
     if (paused) return;
+    const resumed = reconcileSkyClock(clock.current, completed.current, attempts);
+    completed.current = resumed.completed;
+    clock.current = resumed.time;
+    setElapsed(clock.current);
     let frame, previous, painted = 0;
     const tick = time => {
       if (previous !== undefined) {

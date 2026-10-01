@@ -1,8 +1,10 @@
+import { reduceAnimalRewards, restoreAnimalRewards } from '../shared/animal-rewards.js';
 import { dayKey, validDay } from '../shared/calendar.js';
 import { reduceCare, restoreCare } from '../shared/scene-care.js';
 import { reduceStory, restoreStory } from '../shared/story.js';
 import { reduceSkyRewards, restoreSkyRewards } from '../shared/sky-rewards.js';
 import { reduceHabitat, restoreHabitats } from '../shared/greenhouse.js';
+import {reduceWorkshopGrowth,restoreWorkshopGrowth} from '../shared/workshop-growth.js';
 export const SAVE_KEY = 'miaomiao-town:v1';
 export const REWARD = 10;
 export const CATALOG = [
@@ -71,7 +73,11 @@ export function gameReducer(state, action) {
       if (!item || state.coins < item.cost || !BUILD_SLOTS.some(s => s.id === action.slot) || state.buildings.some(b => b.slot === action.slot || b.itemId === action.itemId)) return state;
       return { ...state, coins: state.coins - item.cost, buildings: [...state.buildings, { itemId: item.id, slot: action.slot, builtAt: now }], achievements: earn(state, 'build') };
     }
+    case 'UPGRADE_WORKSHOP':
+    case 'INTERACT_WORKSHOP': return reduceWorkshopGrowth(state,action,now);
     case 'CARE_SCENE': return reduceCare(state, action, now);
+    case 'ANIMAL_DROP':
+    case 'PICKUP_ANIMAL_COIN': return reduceAnimalRewards(state, action);
     case 'BUILD_HABITAT': return reduceHabitat(state, action);
     case 'COLLECT_CRYSTAL':
     case 'PICKUP_SKY_COIN': return reduceSkyRewards(state, action);
@@ -92,14 +98,29 @@ export const BUILD_SLOTS = [
   { id: 'garden', name: '花园旁的空地', x: 0.756, y: 0.602 },
 ];
 export function serializeState(state) { return JSON.stringify({ ...state, savedAt: Date.now() }); }
+const savedStamp = value => Number.isFinite(value) && value >= 0 && !Number.isNaN(new Date(value).getTime());
+function validSavedTask(task) {
+  if (!task || typeof task.id !== 'string' || !task.id || task.id.length > 80 || typeof task.title !== 'string' || validateTask(task)) return false;
+  if (!['planned','active','paused','partial','done'].includes(task.status) || !Number.isFinite(task.estimate) || !Number.isFinite(task.elapsedMs) || task.elapsedMs < 0 || !savedStamp(task.createdAt)) return false;
+  if (typeof task.rewardClaimed !== 'boolean' || (task.rewardClaimed && task.status !== 'done')) return false;
+  if (task.category !== undefined && !['学习','运动','社交','生活','休息'].includes(task.category)) return false;
+  if (task.note !== undefined && typeof task.note !== 'string') return false;
+  if (task.startTime !== undefined && typeof task.startTime !== 'string') return false;
+  if (task.status === 'active' && !savedStamp(task.startedAt)) return false;
+  if (task.status === 'done' && (!savedStamp(task.finishedAt) || !Number.isFinite(task.actualMinutes) || task.actualMinutes < 1 || task.actualMinutes > 1440)) return false;
+  return true;
+}
 export function restoreState(raw) {
   if (!raw) return { state: initialState(), corrupt: false };
   try {
     const data = JSON.parse(raw);
     if (data.version !== 1 || typeof data.greeted !== 'boolean' || !Number.isFinite(data.coins) || data.coins < 0 || !Array.isArray(data.tasks) || !Array.isArray(data.buildings) || !Array.isArray(data.achievements)) throw new Error('Invalid save');
-    if (data.tasks.some(t => !t.id || typeof t.title !== 'string' || !['planned', 'active', 'paused', 'partial', 'done'].includes(t.status) || !Number.isFinite(t.estimate) || !Number.isFinite(t.elapsedMs))) throw new Error('Invalid tasks');
-    if (data.buildings.some(b => !CATALOG.some(i => i.id === b.itemId) || !BUILD_SLOTS.some(s => s.id === b.slot))) throw new Error('Invalid buildings');
-    return { state: { ...initialState(), ...data, skyRewards: restoreSkyRewards(data.skyRewards), habitats: restoreHabitats(data.habitats), storyUnlocked: restoreStory(data.storyUnlocked), care: restoreCare(data.care || {}, data.buildings, Date.now(), restoreHabitats(data.habitats)), reflections: Array.isArray(data.reflections) ? data.reflections : [], boy: data.boy && Number.isFinite(data.boy.x) && Number.isFinite(data.boy.y) ? data.boy : initialState().boy }, corrupt: false };
+    if (data.createdAt !== undefined && !savedStamp(data.createdAt)) throw new Error('Invalid town date');
+    if (data.tasks.some(t => !validSavedTask(t))) throw new Error('Invalid tasks');
+    if (new Set(data.tasks.map(t => t.id)).size !== data.tasks.length) throw new Error('Duplicate tasks');
+    if (data.buildings.some(b => !b || !CATALOG.some(i => i.id === b.itemId) || !BUILD_SLOTS.some(s => s.id === b.slot) || !savedStamp(b.builtAt)) || new Set(data.buildings.map(b => b.itemId)).size !== data.buildings.length || new Set(data.buildings.map(b => b.slot)).size !== data.buildings.length) throw new Error('Invalid buildings');
+    if (data.reflections !== undefined && (!Array.isArray(data.reflections) || data.reflections.some(r => !r || typeof r.taskId !== 'string' || !['faster','similar','longer'].includes(r.answer) || (r.at !== undefined && !savedStamp(r.at))))) throw new Error('Invalid reflections');
+    return { state: { ...initialState(), ...data, workshopGrowth:restoreWorkshopGrowth(data.workshopGrowth,restoreHabitats(data.habitats)), skyRewards: restoreSkyRewards(data.skyRewards), animalRewards: restoreAnimalRewards(data.animalRewards), habitats: restoreHabitats(data.habitats), storyUnlocked: restoreStory(data.storyUnlocked), care: restoreCare(data.care || {}, data.buildings, Date.now(), restoreHabitats(data.habitats)), reflections: Array.isArray(data.reflections) ? data.reflections : [], boy: data.boy && Number.isFinite(data.boy.x) && Number.isFinite(data.boy.y) ? data.boy : initialState().boy }, corrupt: false };
   } catch { return { state: initialState(), corrupt: true }; }
 }
 export function loadGame(storage) {

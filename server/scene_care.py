@@ -4,9 +4,12 @@ import json
 import math
 from pathlib import Path
 from .greenhouse import CATALOGUE
+from .workshop import CATALOGUE as WORKSHOP
+from .workshop_growth import item_for
 
 TARGETS = {t['id']: t for t in json.loads((Path(__file__).resolve().parents[1] / 'shared' / 'scene-care.json').read_text())}
 TARGETS.update({t['id']: t for t in CATALOGUE['targets']})
+TARGETS.update({t['id']: t for t in WORKSHOP['targets']})
 LEVELS = ('初生', '舒展', '繁茂', '盛放')
 
 
@@ -28,6 +31,8 @@ def reduce_care(state, action, now, day_key):
     record = record_for(state, target_id)
     if record['lastEvent'] and record['lastEvent']['id'] == care_id:
         return state
+    if verb == 'care' and item_for(target_id):
+        raise ValueError('请使用成长面板安装新部件，日常保养免费。')
     if verb == 'care':
         if type(action.get('expectedCount')) is not int or action['expectedCount'] != record['careCount']:
             return state

@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { PawPrint, ArrowRight, ArrowLeft, Notebook, CalendarDots, Envelope, SignOut, DownloadSimple, UserCircle, CheckCircle, ArrowsClockwise } from '@phosphor-icons/react';
 import { App } from './App';
 import { api, uniqueId } from './family-api';
+import { mergeFamilySnapshot } from './family-sync';
 import { dayKey, addDays, weekStart, validDay, statusText } from '../shared/calendar';
 import './family.css';
 
 const stamp = ms => new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
 const mailText = { pending: '等待发送', unconfigured: '邮件待配置', sending: '正在发送', sent: '已发送', failed: '发送失败', unknown: '发送结果待确认', disabled: '邮件已关闭' };
-const actionText = { ADD_TASK: '安排了任务', EDIT_TASK: '调整了计划', START_TASK: '开始或继续', PAUSE_TASK: '暂停计时', RECORD_TASK: '记下了进展', CLAIM_REWARD: '领取星球币', GREET: '认识了小乖', BUILD: '建设了小镇', REFLECT: '回顾了用时', IMPORT: '导入旧存档', CARE_SCENE: '照料了小镇', UNLOCK_STORY: '解锁了奥莱手稿', PICKUP_SKY_COIN: '拾起了星球币', BUILD_HABITAT: '添置了温室栖息地' };
+const actionText = { UPGRADE_WORKSHOP:'机械港永久升级', INTERACT_WORKSHOP:'和机械伙伴互动', ADD_TASK: '安排了任务', EDIT_TASK: '调整了计划', START_TASK: '开始或继续', PAUSE_TASK: '暂停计时', RECORD_TASK: '记下了进展', CLAIM_REWARD: '领取星球币', GREET: '认识了小乖', BUILD: '建设了小镇', REFLECT: '回顾了用时', IMPORT: '导入旧存档', CARE_SCENE: '照料了小镇', UNLOCK_STORY: '解锁了奥莱手稿', PICKUP_SKY_COIN: '拾起了星球币', PICKUP_ANIMAL_COIN: '拾起动物留下的星球币', BUILD_HABITAT: '添置了伙伴设施' };
 
 export function FamilyApp() {
   const [session, setSession] = useState(null), [error, setError] = useState('');
@@ -46,9 +47,9 @@ function Login({ initialized, canSetup, onLogin }) {
 function TownSession({ session, onLogout, sessionError }) {
   const [snapshot, setSnapshot] = useState(null), [screen, setScreen] = useState(session.user.role === 'parent' ? 'journal' : 'town');
   const [problem, setProblem] = useState(null), [busy, setBusy] = useState(false), [offline, setOffline] = useState(false);
-  const pending = useRef(null), current = useRef(null), tab = useRef(uniqueId());
+  const pending = useRef(null), sending = useRef(false), current = useRef(null), tab = useRef(uniqueId());
   const apply = useCallback(value => {
-    const next = { ...value, state: { ...value.state, boy: current.current?.state.boy || value.state.boy } };
+    const next = mergeFamilySnapshot(current.current, value);
     current.current = next; setSnapshot(next);
   }, []);
   useEffect(() => {
@@ -73,14 +74,14 @@ function TownSession({ session, onLogout, sessionError }) {
     window.addEventListener('beforeunload', unload); return () => window.removeEventListener('beforeunload', unload);
   }, []);
   async function sendPending() {
-    if (!pending.current) return;
+    if (!pending.current || sending.current) return;
+    sending.current = true;
     setBusy(true); setProblem(null);
     try { const data = await api('actions', pending.current); apply(data); pending.current = null; setOffline(false); }
     catch (e) { if (e.current) { apply(e.current); pending.current.revision = e.current.revision; } setProblem(e); }
-    finally { setBusy(false); }
+    finally { sending.current = false; setBusy(false); }
   }
   function dispatch(action) {
-    if (action.type === 'MOVE') { if (current.current) apply({ ...current.current, state: { ...current.current.state, boy: action.position } }); return; }
     if (pending.current || !current.current) return;
     pending.current = { action, operationId: uniqueId(), revision: current.current.revision };
     sendPending();
@@ -118,7 +119,7 @@ function Journal({ session, onBack, onLogout, onImport, revision }) {
       <h3 className="section-heading">{tab === 'week' ? '这一周的任务清单' : '当天安排和有进展的任务'}<span>{report.tasks.length} 项</span></h3>
       {!report.tasks.length ? <div className="journal-empty"><img src="/assets/xiaoguai.png" alt="小乖安静地陪伴你" /><h3>这一页，还留着空白</h3><p>没有任务记录也没关系，休息也是生活的一部分。</p></div> : <div className="journal-tasks">{report.tasks.map(task => <article key={task.id} className="journal-task"><div className="task-row-top"><span className="task-category">{task.category}</span><span className={`status-label ${task.status}`}>{statusText[task.status]}</span></div><h3>{task.title}</h3><p>安排于 {task.day} {task.startTime} · 预计 {task.estimate} 分钟{task.actualMinutes != null && ` · 自报实际 ${task.actualMinutes} 分钟`}</p>{task.recordedLaterAt && <p>这条安排补记于 {stamp(task.recordedLaterAt)}</p>}{task.note && <blockquote>{task.note}</blockquote>}</article>)}</div>}
       <h3 className="section-heading">时间花在哪里</h3><div className="category-summary">{report.categories.map(c => <div key={c.name}><strong>{c.name}</strong><span>计划 {c.plannedMinutes} 分钟</span><span>完成自报 {c.actualMinutes} 分钟</span></div>)}</div>{report.completedCount > 0 && <p className="family-note">这段时间完成的任务，自报总用时比它们的预计{report.estimateDifference === 0 ? '相同' : `${report.estimateDifference > 0 ? '多' : '少'} ${Math.abs(report.estimateDifference)} 分钟`}。下次可以参考这次经验调整估时。</p>}
-      {tab === 'day' && <><h3 className="section-heading">留下的小脚印</h3><ol className="activity-list">{report.activities.map((event,index) => <li key={index}><time>{stamp(event.at)}</time><div><strong>{actionText[event.kind] || event.kind}</strong>{event.task && <span>{event.task.title} · {statusText[event.task.status]}</span>}{['CARE_SCENE', 'UNLOCK_STORY', 'PICKUP_SKY_COIN', 'BUILD_HABITAT'].includes(event.kind) && <p>{event.detail}</p>}{event.kind === 'RECORD_TASK' && event.task?.note && <p>{event.task.note}</p>}</div></li>)}</ol>{!report.activities.length && <p className="soft-copy left">这天没有操作记录。</p>}</>}
+      {tab === 'day' && <><h3 className="section-heading">留下的小脚印</h3><ol className="activity-list">{report.activities.map((event,index) => <li key={index}><time>{stamp(event.at)}</time><div><strong>{actionText[event.kind] || event.kind}</strong>{event.task && <span>{event.task.title} · {statusText[event.task.status]}</span>}{['UPGRADE_WORKSHOP','INTERACT_WORKSHOP','CARE_SCENE', 'UNLOCK_STORY', 'PICKUP_SKY_COIN','PICKUP_ANIMAL_COIN', 'BUILD_HABITAT'].includes(event.kind) && <p>{event.detail}</p>}{event.kind === 'RECORD_TASK' && event.task?.note && <p>{event.task.note}</p>}</div></li>)}</ol>{!report.activities.length && <p className="soft-copy left">这天没有操作记录。</p>}</>}
       {report.imported && <p className="family-note">包含旧版存档。旧任务的日期和完成情况已保留，但无法还原导入前的每次操作和页面使用时长。</p>}
       {tab === 'week' && <><h3 className="section-heading">周末投递</h3><p className="soft-copy left">每周日 20:00 自动生成站内周报并发送家长邮件。邮件是生成时快照；站内清单会继续收录周日后续的记录。</p>{history.filter(r => r.week === weekStart(date)).map(row => <div className="delivery-row" key={row.id}><CheckCircle size={22} /><div><strong>站内周报已生成</strong><p>{stamp(row.generatedAt)} · {mailText[row.mailStatus]}{row.sentAt ? ` · ${stamp(row.sentAt)}` : ''}</p></div>{parent && ['unknown','failed','disabled','unconfigured'].includes(row.mailStatus) && <button className="text-button" onClick={() => setTab('account')}>查看设置</button>}</div>)}{!history.some(r => r.week === weekStart(date)) && <p className="family-note">这是实时清单；周日 20:00 后会生成本周的投递记录。服务器停机时，恢复后会补生成。</p>}</>}
       </>}

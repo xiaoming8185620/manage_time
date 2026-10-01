@@ -1,12 +1,16 @@
+import {growthItem,growthRecord} from './workshop-growth.js';
 import catalogue from './greenhouse.json' with { type:'json' };
+import { WORKSHOP_HABITATS } from './workshop.js';
 export const HABITATS = catalogue.habitats;
+export const ALL_HABITATS = [...HABITATS, ...WORKSHOP_HABITATS];
 export const GREENHOUSE_TARGETS = catalogue.targets;
 export function restoreHabitats(value = []) {
-  if (!Array.isArray(value) || value.some(id=>!HABITATS.some(h=>h.id===id)) || new Set(value).size!==value.length) throw new Error('Invalid habitats');
+  if (!Array.isArray(value) || value.some(id=>!ALL_HABITATS.some(h=>h.id===id)) || new Set(value).size!==value.length) throw new Error('Invalid habitats');
   return [...value];
 }
 export function reduceHabitat(state, action) {
-  const item=HABITATS.find(h=>h.id===action.habitatId), owned=state.habitats||[];
+  const item=ALL_HABITATS.find(h=>h.id===action.habitatId), owned=state.habitats||[];
+  if (item && ['robot-dock','drone-gantry'].includes(item.id) && growthRecord(state,item.id==='robot-dock'?'dog':'pad').level>0)return state;
   if (!item || owned.includes(item.id) || state.coins<item.cost) return state;
   return {...state,coins:state.coins-item.cost,habitats:[...owned,item.id]};
 }

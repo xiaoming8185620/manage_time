@@ -9,7 +9,7 @@
     "build:family": "vite build --mode family --outDir dist/family",
     "test:family": "python3 -m unittest discover -s tests -p 'test_*.py'",
     "preview": "vite preview",
-    "test": "node --test tests/game.test.mjs tests/weather.test.mjs tests/sky-life.test.mjs tests/story.test.mjs tests/sky-rewards.test.mjs tests/greenhouse.test.mjs",
+    "test": "node --test tests/game.test.mjs tests/weather.test.mjs tests/sky-life.test.mjs tests/story.test.mjs tests/sky-rewards.test.mjs tests/greenhouse.test.mjs tests/animal-rewards.test.mjs tests/family-sync.test.mjs tests/workshop.test.mjs tests/workshop-growth.test.mjs tests/scene-music.test.mjs tests/workshop-supply.test.mjs",
     "test:sites": "node --test tests/sites-worker.test.mjs"
   },
   "dependencies": {

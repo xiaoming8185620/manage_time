@@ -1,17 +1,20 @@
+import {growthItem} from './workshop-growth.js';
 import targets from './scene-care.json' with { type: 'json' };
 import { dayKey } from './calendar.js';
 import { GREENHOUSE_TARGETS } from './greenhouse.js';
-const allTargets = [...targets, ...GREENHOUSE_TARGETS];
+import { WORKSHOP_TARGETS } from './workshop.js';
+const allTargets = [...targets, ...GREENHOUSE_TARGETS, ...WORKSHOP_TARGETS];
 
 export const CARE_TARGETS = allTargets;
 export const CARE_LEVELS = ['初生', '舒展', '繁茂', '盛放'];
 export const careTarget = id => allTargets.find(target => target.id === id);
-export const availableCareTargets = (state, scene = 'town') => allTargets.filter(target => (target.scene || 'town') === scene && (!target.itemId || state.buildings.some(b => b.itemId === target.itemId)) && (!target.habitatId || state.habitats?.includes(target.habitatId)));
+export const availableCareTargets = (state, scene = 'town') => allTargets.filter(target => !target.legacy && (target.scene || 'town') === scene && (!target.itemId || state.buildings.some(b => b.itemId === target.itemId)) && (!target.habitatId || state.habitats?.includes(target.habitatId)));
 export const careRecord = (state, id) => ({ careCount: 0, waterCount: 0, interactionCount: 0, caredAt: null, wateredAt: null, interactedAt: null, lastEvent: null, ...state.care?.[id] });
 export function careReason(state, target, verb, now = Date.now()) {
   if (!target || (target.itemId && !state.buildings.some(b => b.itemId === target.itemId))) return '先建好这处小天地，再来照料。';
   if (target.habitatId && !state.habitats?.includes(target.habitatId)) return '先建好这处栖息地，再来照料。';
   const record = careRecord(state, target.id);
+  if (verb === 'care' && growthItem(target.id)) return '请使用成长面板安装新部件，日常保养免费。';
   if (verb === 'care') {
     if (target.kind === 'plant' && record.careCount >= 3) return '已经长到盛放，可以继续免费浇水。';
     if (target.kind !== 'plant' && record.caredAt != null && dayKey(record.caredAt) === dayKey(now)) return '今天已经照料过了，明天再来就好。';

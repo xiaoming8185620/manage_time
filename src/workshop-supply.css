@@ -1,0 +1,18 @@
+.supply-facility,.supply-pod{position:absolute;transform:translate(-50%,-94%);pointer-events:none}
+.supply-facility .supply-art,.supply-pod .supply-art{filter:drop-shadow(1px 3px 2px #1e42482b)}
+.supply-arm-base{clip-path:inset(55% 0 0)}
+.supply-arm .supply-arm-moving{position:absolute;inset:0;clip-path:inset(0 0 45%);transform-origin:78% 57%;transform:rotate(var(--supply-arm-angle))}
+.supply-lift .supply-art{transform:translateY(var(--supply-lift-y))}
+.supply-facility-hit,.supply-pod-hit{position:absolute;transform:translate(-50%,-50%);width:6%;height:6%;min-width:44px;min-height:44px;z-index:83;padding:0;background:transparent;border:0;border-radius:12px}
+.supply-facility-hit:active:not(:disabled),.supply-pod-hit:active:not(:disabled){transform:translate(-50%,-50%)}
+.supply-facility-hit:hover .workshop-name,.supply-facility-hit:focus-visible .workshop-name,.supply-pod-hit:hover .workshop-name,.supply-pod-hit:focus-visible .workshop-name{opacity:1}
+.supply-dock-hit .workshop-name,.supply-pod-hit .workshop-name{left:0;transform:none}
+.supply-gate-glow{position:absolute;left:4%;top:19%;width:13%;height:19%;background:radial-gradient(ellipse,#78eaff,transparent 72%);z-index:17;pointer-events:none}
+.supply-gate-label{position:absolute;left:6%;top:17%;transform:rotate(5deg);font-size:1.2cqw;color:#d9ffff;text-shadow:0 0 4px #16bce2;z-index:17;pointer-events:none}
+.supply-dock-light{position:absolute;left:15%;bottom:12%;width:70%;height:18%;border-radius:50%;box-shadow:0 0 8px 2px #61dfe881;pointer-events:none}
+.supply-scan{position:absolute;left:20%;bottom:18%;width:62%;height:44%;background:linear-gradient(0deg,#62e9f344,transparent);border-bottom:1px solid #9df7ff;pointer-events:none}
+.supply-escort{position:absolute;right:-20%;top:54%;width:28%;pointer-events:none}
+.supply-cargo{position:absolute;transform:translate(-50%,-94%);width:3.1%;pointer-events:none}
+.supply-cargo img{display:block;width:100%;filter:drop-shadow(1px 3px 1px #19344238)}
+.supply-pod .supply-pod-response{filter:brightness(1.12) drop-shadow(0 0 3px #a6f5f9)}
+.supply-energy-light{position:absolute;top:78.4%;width:1.6%;height:.3%;border-radius:50%;background:#c7fdff;box-shadow:0 0 6px 3px #8eeaff55;transform:rotate(11deg);z-index:79;pointer-events:none}
