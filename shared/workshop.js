@@ -1,9 +1,13 @@
 import catalogue from './workshop.json' with {type:'json'};
 import { taskDay } from './calendar.js';
 import { workshopTrainAt } from './workshop-rail.js';
+import { WORKSHOP_LAYOUT } from './workshop-layout.js';
 
-export const WORKSHOP_TARGETS = catalogue.targets;
-export const WORKSHOP_HABITATS = catalogue.habitats;
+export const WORKSHOP_TARGETS = catalogue.targets.map(target=>{
+  const layout=WORKSHOP_LAYOUT[target.habitatId || target.art];
+  return layout?.x == null ? target : {...target,x:layout.x,y:layout.y};
+});
+export const WORKSHOP_HABITATS = catalogue.habitats.map(item=>({...item,...WORKSHOP_LAYOUT[item.id]}));
 // A convex walking area keeps every straight journey clear of the projector,
 // cargo dock and the foreground stairwell. Values are image-space feet.
 export const WORKSHOP_FLOOR = [[.27,.535],[.67,.535],[.84,.63],[.78,.73],[.35,.73],[.17,.62]];
@@ -35,7 +39,7 @@ function route(points,t) {
 export function workshopLifeAt(kind,ms,habitats=[]) {
   const s=Math.max(0,Number.isFinite(ms)?ms:0)/1000;
   if(kind==='dog') {
-    const [x,y]=habitats.includes('robot-dock')?[.23,.59]:[.29,.63];
+    const {x,y}=WORKSHOP_LAYOUT[habitats.includes('robot-dock')?'restingDog':'dog'];
     return {x,y,facing:'right',rest:true,frame:0,opacity:1};
   }
   if(kind==='cleaner')return {...route([[0,.82,.70],[5,.82,.70],[17,.68,.71],[24,.68,.71],[38,.81,.64],[46,.82,.70]],s%46),rest:s%46<5,opacity:1};

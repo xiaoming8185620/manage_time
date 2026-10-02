@@ -20,6 +20,8 @@ def record_for(state, target_id):
 def reduce_care(state, action, now, day_key):
     target_id, verb, care_id = action.get('targetId'), action.get('verb'), action.get('careId')
     target = TARGETS.get(target_id) if isinstance(target_id, str) else None
+    if target and target.get('retired'):
+        raise ValueError('这项建设已经下架，原有记录仍然保留。')
     if not target or verb not in ('water', 'care', 'interact') or not isinstance(care_id, str) or not 10 <= len(care_id) <= 80:
         raise ValueError('照料操作格式不正确。')
     if target.get('itemId') and not any(b['itemId'] == target['itemId'] for b in state['buildings']):

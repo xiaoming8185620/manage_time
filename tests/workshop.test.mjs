@@ -11,9 +11,9 @@ test('workshop shares save and wallet; free care has no greeting or balance gate
   assert.equal(availableCareTargets(state,'workshop').length,12);
   for(const t of WORKSHOP_TARGETS.filter(t=>!t.habitatId))state=gameReducer(state,{type:'CARE_SCENE',targetId:t.id,verb:'interact',careId:`workshop-${t.id}`,now:10000});
   assert.equal(state.coins,0);assert.equal(state.greeted,false);assert.equal(Object.keys(state.care).length,13);
-  const funded={...state,coins:50};state=funded;
+  const funded={...state,coins:30+WORKSHOP_HABITATS.reduce((sum,h)=>sum+h.cost,0)};state=funded;
   for(const item of WORKSHOP_HABITATS){state=gameReducer(state,{type:'BUILD_HABITAT',habitatId:item.id,cost:0});assert.equal(gameReducer(state,{type:'BUILD_HABITAT',habitatId:item.id}),state);}
-  assert.equal(state.coins,30);assert.equal(availableCareTargets(state,'workshop').length,14);
+  assert.equal(state.coins,30);assert.equal(availableCareTargets(state,'workshop').length,12+WORKSHOP_HABITATS.length);
   state=gameReducer(state,{type:'CARE_SCENE',targetId:'ws-dock-care',verb:'interact',careId:'dock-free-check',now:14000});
   state=gameReducer(state,{type:'CARE_SCENE',targetId:'ws-train',verb:'care',careId:'ws-dock-paid-123',expectedCount:0,now:15000});
   assert.equal(state.coins,26);

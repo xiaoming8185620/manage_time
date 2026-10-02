@@ -25,7 +25,7 @@ test('greenhouse care shares wallet, caps growth and survives save restore witho
 });
 test('habitats spend once, reject insufficient funds and restore their care records',()=>{
   assert.equal(gameReducer(initialState(),{type:'BUILD_HABITAT',habitatId:'parrot-perch'}).coins,0);
-  let state={...initialState(),coins:30};
+  let state={...initialState(),coins:10+HABITATS.reduce((sum,h)=>sum+h.cost,0)};
   for(const h of HABITATS){state=gameReducer(state,{type:'BUILD_HABITAT',habitatId:h.id});const once=state;assert.equal(gameReducer(state,{type:'BUILD_HABITAT',habitatId:h.id}),once);}
   assert.equal(state.coins,10);
   state=gameReducer(state,{type:'CARE_SCENE',targetId:'gh-perch-care',verb:'care',expectedCount:0,careId:'perch-care-123',now:1000});

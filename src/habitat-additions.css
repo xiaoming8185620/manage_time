@@ -1,0 +1,19 @@
+.habitat-art{display:block;position:relative;width:100%;overflow:hidden;pointer-events:none}
+.habitat-art img{position:absolute;max-width:none;height:auto;pointer-events:none}
+.habitat-addition{position:absolute;transform:translate(-50%,-96%);pointer-events:none}
+.habitat-hit{position:absolute;min-width:44px;min-height:44px;padding:0;background:transparent;pointer-events:auto;transition:none;transform:translate(-50%,-50%)}
+.habitat-hit:active:not(:disabled){transform:translate(-50%,-50%)}
+.habitat-name{position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);white-space:nowrap;background:#fff7e6ed;border:1px solid #baa878;padding:3px 7px;border-radius:9px;font-size:11px;opacity:0;pointer-events:none}
+.habitat-hit:hover .habitat-name,.habitat-hit:focus-visible .habitat-name,.show-habitat-hint .habitat-name{opacity:1}
+.habitat-responding .habitat-art{animation:habitat-glow 1.8s ease-in-out infinite}
+.habitat-addition.life-paused .habitat-art{animation:none}
+.habitat-response{position:absolute;bottom:105%;left:50%;transform:translateX(-50%);width:170px;padding:8px 10px;border:1px solid #b6ba94;border-radius:12px;background:#fffaebf5;font-size:11px;line-height:1.6;pointer-events:none}
+.habitat-preview:has(.habitat-art){width:130px;max-height:200px;display:flex;justify-content:center}
+.habitat-preview .habitat-art{width:min(130px,calc(190px * var(--habitat-ratio)))}
+.care-preview.addition-preview{height:200px;display:flex;justify-content:center;align-items:center;background:#f0ecdc}
+.addition-preview .habitat-art{width:min(130px,calc(190px * var(--habitat-ratio)))}
+.build-slot.flowerbed{width:14%;height:auto;aspect-ratio:1;transform:translate(-50%,-85%)}
+.build-slot.flowerbed:active:not(:disabled){transform:translate(-50%,-85%)}
+.flower-placement-plants{display:contents;pointer-events:none}
+.flower-placement-plants .plant-sprite{z-index:100!important}
+@keyframes habitat-glow{50%{filter:brightness(1.1) drop-shadow(0 0 4px #89d3c788)}}

@@ -15,8 +15,8 @@ def funded():
     state = initial_state(NOW)
     for i in range(3):
         task = dict(id=f'task-{i}', title='读十页书', category='学习', estimate=10, startTime='17:00')
-        for a in [dict(type='ADD_TASK', task=task), dict(type='RECORD_TASK', id=task['id'], status='done', actualMinutes=10), dict(type='CLAIM_REWARD', id=task['id'])]:
-            state = reduce_game(state, a, NOW)
+        for a in [dict(type='ADD_TASK', task=task), dict(type='START_TASK',id=task['id']), dict(type='RECORD_TASK', id=task['id'], status='done', actualMinutes=10), dict(type='CLAIM_REWARD', id=task['id'])]:
+            state = reduce_game(state, a, NOW - 600000 if a['type'] in ('ADD_TASK','START_TASK') else NOW)
     return state
 
 

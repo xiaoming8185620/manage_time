@@ -19,6 +19,52 @@
       "y": 0.44,
       "width": 0.115,
       "description": "在停机坪旁添一处机械臂和工具架，给星梭一个完成飞行后的检修角落。"
+    },
+    {
+      "id": "lunar-cabinet",
+      "name": "月岩标本舱",
+      "cost": 10,
+      "x": 0.89,
+      "y": 0.62,
+      "width": 0.06,
+      "crop": [
+        320,
+        50,
+        960,
+        1185
+      ],
+      "targetId": "ws-lunar-care",
+      "image": "/assets/workshop-lunar-cabinet-v1.png",
+      "description": "在墨子观测台右侧添一座透明月岩标本舱，与星图观测相伴。放大镜和扫描灯让每条矿石纹路都值得观察。",
+      "hit": {
+        "x": 0.62,
+        "y": 0.36,
+        "w": 0.72,
+        "h": 0.42
+      }
+    },
+    {
+      "id": "comms-station",
+      "name": "小型星际通讯站",
+      "cost": 10,
+      "x": 0.145,
+      "y": 0.705,
+      "width": 0.075,
+      "crop": [
+        265,
+        40,
+        1025,
+        1200
+      ],
+      "targetId": "ws-comms-care",
+      "image": "/assets/workshop-comms-station-v1.png",
+      "description": "在补给港左前侧、升降平台旁安放小型天线与接收台，与来访飞船保持联络。货物转运通道留在右侧，听一段云海航线的友好问候。",
+      "hit": {
+        "x": 0.5,
+        "y": 0.78,
+        "w": 0.76,
+        "h": 0.36
+      }
     }
   ],
   "targets": [
@@ -265,6 +311,56 @@
       "description": "货箱送到这里进行整理。工具架、检修灯与展开支架逐级加入，不照料也不会损坏。",
       "reply": "升降平台已经准备好：先把工具归位，事情可以一件件完成。",
       "careReply": "新部件安装完成，成长会永久保留。"
+    },
+    {
+      "id": "ws-lunar-care",
+      "scene": "workshop",
+      "name": "月岩标本舱",
+      "kind": "facility",
+      "habitatId": "lunar-cabinet",
+      "moving": true,
+      "x": 0.89,
+      "y": 0.58,
+      "w": 0.06,
+      "h": 0.1,
+      "cost": 2,
+      "image": "/assets/workshop-lunar-cabinet-v1.png",
+      "crop": [
+        320,
+        50,
+        960,
+        1185
+      ],
+      "freeLabel": "扫描月岩纹路",
+      "paidLabel": "擦拭标本舱",
+      "description": "在墨子观测台右侧添一座透明月岩标本舱，与星图观测相伴。放大镜和扫描灯让每条矿石纹路都值得观察。",
+      "reply": "扫描灯缓缓亮起，月岩的青色矿脉像一张安静的星图。",
+      "careReply": "玻璃和放大镜擦亮了，月岩的细小纹理变得更加清楚。"
+    },
+    {
+      "id": "ws-comms-care",
+      "scene": "workshop",
+      "name": "小型星际通讯站",
+      "kind": "facility",
+      "habitatId": "comms-station",
+      "moving": true,
+      "x": 0.145,
+      "y": 0.665,
+      "w": 0.075,
+      "h": 0.1,
+      "cost": 2,
+      "image": "/assets/workshop-comms-station-v1.png",
+      "crop": [
+        265,
+        40,
+        1025,
+        1200
+      ],
+      "freeLabel": "接收云海问候",
+      "paidLabel": "校准接收天线",
+      "description": "在补给港左前侧、升降平台旁安放小型天线与接收台，与来访飞船保持联络。货物转运通道留在右侧，听一段云海航线的友好问候。",
+      "reply": "通讯灯亮起：这里是云海驿站，祝你今天的计划留有一点探索的空白。",
+      "careReply": "天线与接收器校准完成，下一次问候会听得更清楚。"
     }
   ]
 }

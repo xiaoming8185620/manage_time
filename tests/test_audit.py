@@ -54,6 +54,18 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(response.json['state']['coins'],10)
         json.loads(self.client.get('/api/export').data, parse_constant=lambda value:self.fail(value))
 
+    def test_import_active_task_preserves_running_segment_before_pausing(self):
+        data = self.done_save()
+        data['tasks'][0].update(status='active',rewardClaimed=False,createdAt=NOW-1200000,
+                                startedAt=NOW-900000,elapsedMs=300000)
+        response = self.post('/api/import',data)
+        self.assertEqual(response.status_code,200)
+        task = response.json['state']['tasks'][0]
+        self.assertEqual(task['status'],'paused')
+        self.assertIsNone(task['startedAt'])
+        self.assertEqual(task['elapsedMs'],1200000)
+        self.assertEqual(response.json['state']['coins'],0)
+
     def test_retry_does_not_reset_a_report_claimed_by_sender(self):
         self.post('/api/login',{'role':'parent'})
         self.store.generate_due_reports(week_due('2026-09-28'))

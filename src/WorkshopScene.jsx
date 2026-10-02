@@ -1,3 +1,4 @@
+import {HabitatArt,HabitatAddition} from './HabitatArt';
 import {growthItem,growthRecord} from '../shared/workshop-growth';
 import {WorkshopGrowthArt} from './WorkshopGrowth';
 import React,{useEffect,useRef,useState} from 'react';
@@ -7,6 +8,7 @@ import {careTarget,careRecord} from '../shared/scene-care';
 import {WorkshopArt} from './WorkshopArt';
 import {WorkshopSupply} from './WorkshopSupply';
 import {supplyAt} from '../shared/workshop-supply';
+import {WORKSHOP_LAYOUT as layout} from '../shared/workshop-layout';
 import {SceneCareLayer} from './SceneCare';
 import './workshop.css';
 
@@ -58,16 +60,17 @@ export function WorkshopScene({state,paused,disabled,onOpen,hints,effect,now,pre
       {earth.level>0?<WorkshopGrowthArt kind="earth" level={earth.selection==='solar'?3:earth.selection==='moon'?2:1}/>:<><WorkshopArt kind="earth" frame={earthFrame} style={{opacity:1-fade}}/><WorkshopArt kind="earth" frame={(earthFrame+1)%3} className="earth-next" style={{opacity:fade}}/></>}
       <span className="workshop-name">地球全息仪</span>
     </button>
-    {object('brain','ws-brain',{x:.815,y:.385,frame:0},.17,{'--brain-tilt':`${Math.sin(time/4300)*1.2}deg`,zIndex:35})}
-    {WORKSHOP_HABITATS.filter(item=>state.habitats?.includes(item.id)&&growthRecord(state,item.id==='robot-dock'?'dog':'pad').level< (item.id==='robot-dock'?3:2)).map(item=>object(item.art,item.id==='robot-dock'?'ws-dock-care':'ws-gantry-care',{x:item.x,y:item.y,rest:true},item.width))}
-    {object('dog','ws-dog',dog,.116)}
-    {object('cleaner','ws-cleaner',cleaner,.095)}
-    {object('bench','ws-bench',{x:.34,y:.49,rest:true},.105)}
-    {object('energy','ws-energy',{x:.705,y:.51,rest:true},.065)}
-    {pad.level>0&&object('pad','ws-pad',{x:.245,y:.435,rest:true},.155,{zIndex:40})}
-    {brain.level===3&&<span className="workshop-assistant-ball" style={{left:`${(.715+.012*Math.sin(time/2400))*100}%`,top:`${(.25+.018*Math.cos(time/2400))*100}%`}} aria-hidden="true"><img src="/assets/workshop-growth-brain-v1.png" alt=""/></span>}
-    {bench.level===3&&['flower','satellite','star'].includes(bench.selection)&&<span className="workshop-collectible" aria-label={`装配台收藏：${({flower:'齿轮花',satellite:'小卫星',star:'机械星星'})[bench.selection]}`} style={{'--collectible-index':['flower','satellite','star'].indexOf(bench.selection)}}><img src="/assets/workshop-collectibles-v1.png" alt=""/></span>}
-    {object('drone','ws-drone',drone,.103,{zIndex:46,'--drone-hover':`${paused||drone.rest?0:Math.sin(time/430)*2}px`})}
+    {object('brain','ws-brain',layout.brain,layout.brain.width,{'--brain-tilt':`${Math.sin(time/4300)*1.2}deg`,zIndex:35})}
+    {WORKSHOP_HABITATS.filter(item=>!item.image&&state.habitats?.includes(item.id)&&growthRecord(state,item.id==='robot-dock'?'dog':'pad').level< (item.id==='robot-dock'?3:2)).map(item=>object(item.art,item.id==='robot-dock'?'ws-dock-care':'ws-gantry-care',{x:item.x,y:item.y,rest:true},item.width))}
+    {WORKSHOP_HABITATS.filter(item=>item.image&&state.habitats?.includes(item.id)).map(item=><HabitatAddition key={item.id} {...{item,state,paused,disabled,hints,now,onOpen}}/>)}
+    {object('dog','ws-dog',dog,layout.dog.width)}
+    {object('cleaner','ws-cleaner',cleaner,layout.cleaner.width)}
+    {object('bench','ws-bench',{...layout.bench,rest:true},layout.bench.width)}
+    {object('energy','ws-energy',{...layout.energy,rest:true},layout.energy.width)}
+    {pad.level>0&&object('pad','ws-pad',{...layout.pad,rest:true},layout.pad.width,{zIndex:40})}
+    {brain.level===3&&<span className="workshop-assistant-ball" style={{left:`${(layout.brain.x-.09+.012*Math.sin(time/2400))*100}%`,top:`${(layout.brain.y-.13+.018*Math.cos(time/2400))*100}%`}} aria-hidden="true"><img src="/assets/workshop-growth-brain-v1.png" alt=""/></span>}
+    {bench.level===3&&['flower','satellite','star'].includes(bench.selection)&&<span className="workshop-collectible" aria-label={`装配台收藏：${({flower:'齿轮花',satellite:'小卫星',star:'机械星星'})[bench.selection]}`} style={{left:`${(layout.bench.x-.01)*100}%`,top:`${(layout.bench.y-.10)*100}%`,'--collectible-index':['flower','satellite','star'].indexOf(bench.selection)}}><img src="/assets/workshop-collectibles-v1.png" alt=""/></span>}
+    {object('drone','ws-drone',drone,layout.drone.width,{zIndex:46,'--drone-hover':`${paused||drone.rest?0:Math.sin(time/430)*2}px`})}
     <WorkshopSupply state={state} time={time} visit={visit} paused={paused} disabled={disabled} hints={hints} onOpen={onOpen} now={now}/>
   </>;
 }
@@ -76,9 +79,9 @@ export function WorkshopBrief({state,today,onPlan}) {
   return <aside className="workshop-brief"><strong><Compass size={18}/>墨子的今日建议</strong><p>{workshopAdvice(state,today)}</p><button className="text-button" onClick={onPlan}><Notebook size={17}/>打开今日计划<ArrowRight size={16}/></button></aside>;
 }
 
-export function WorkshopShop({state,dispatch,busy}) {
+export function WorkshopShop({state,dispatch,busy,items=WORKSHOP_HABITATS.filter(item=>item.image)}) {
   const [confirm,setConfirm]=useState(null);
   return <div className="habitat-shop"><p className="soft-copy left">给机械伙伴添一处安静的角落。建设永久保留，日常互动一直免费。</p><div className="care-wallet"><span>我的星球币</span><strong>{state.coins} 星球币</strong></div>
-    {WORKSHOP_HABITATS.map(item=>{const owned=state.habitats?.includes(item.id);return <article className="habitat-card" key={item.id}><div className="habitat-preview"><WorkshopArt kind={item.art}/></div><h3>{item.name}</h3><p>{item.description}</p>{owned?<span className="habitat-owned"><Check size={17}/>已经建好 · 永久保留</span>:confirm===item.id?<div className="habitat-confirm"><p>使用 {item.cost} 星球币，余额将变为 {Math.max(0,state.coins-item.cost)}。</p><button className="primary-button" disabled={busy||state.coins<item.cost} onClick={()=>dispatch({type:'BUILD_HABITAT',habitatId:item.id})}>确认建造 · {item.cost} 星球币<Check/></button><button className="text-button" disabled={busy} onClick={()=>setConfirm(null)}>先不花币</button></div>:<button className="secondary-button" disabled={busy||state.coins<item.cost} onClick={()=>setConfirm(item.id)}>{state.coins<item.cost?`还差 ${item.cost-state.coins} 星球币`:`添置 · ${item.cost} 星球币`}<ArrowRight size={16}/></button>}</article>;})}
+    {items.map(item=>{const owned=state.habitats?.includes(item.id);return <article className="habitat-card" key={item.id}><div className="habitat-preview">{item.image?<HabitatArt item={item}/>:<WorkshopArt kind={item.art}/>}</div><h3>{item.name}</h3><p>{item.description}</p>{owned?<span className="habitat-owned"><Check size={17}/>已经建好 · 永久保留</span>:confirm===item.id?<div className="habitat-confirm"><p>使用 {item.cost} 星球币，余额将变为 {Math.max(0,state.coins-item.cost)}。</p><button className="primary-button" disabled={busy||state.coins<item.cost} onClick={()=>dispatch({type:'BUILD_HABITAT',habitatId:item.id})}>确认建造 · {item.cost} 星球币<Check/></button><button className="text-button" disabled={busy} onClick={()=>setConfirm(null)}>先不花币</button></div>:<button className="secondary-button" disabled={busy||state.coins<item.cost} onClick={()=>setConfirm(item.id)}>{state.coins<item.cost?`还差 ${item.cost-state.coins} 星球币`:`添置 · ${item.cost} 星球币`}<ArrowRight size={16}/></button>}</article>;})}
   </div>;
 }

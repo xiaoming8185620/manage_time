@@ -12,7 +12,7 @@
 .life-paused,.life-paused *{animation-play-state:paused!important}
 .motion-toggle[aria-pressed=true]{color:#5d7953}
 .motion-toggle[aria-pressed=false]{color:#8c795d;background:#f2e6cf}
-.actor.cat-companion{transition-property:left,top;transition-duration:var(--cat-travel);transition-timing-function:linear;overflow:visible}
+.actor.cat-companion{transition-property:left,top,z-index;transition-duration:var(--cat-travel);transition-timing-function:linear;overflow:visible}
 .cat-facing,.cat-body{display:block;width:100%}
 .cat-facing{transform:scaleX(1)}
 .cat-companion[data-facing=left] .cat-facing{transform:scaleX(-1)}

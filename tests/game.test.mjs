@@ -2,9 +2,33 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, gameReducer as reduce, elapsed, restoreState, serializeState, canWalk, validateTask, BUILD_SLOTS } from '../src/game.js';
 const task = { id: 'math', title: '数学前六题', category: '学习', estimate: 25, startTime: '17:50' };
+
+test('task estimates require ten minutes while historical short records stay readable',()=>{
+  for(const estimate of [1,5,9,9.99])assert.ok(validateTask({...task,estimate}));
+  const old={...withTask(),tasks:[{...withTask().tasks[0],estimate:5}]};
+  assert.equal(restoreState(serializeState(old)).corrupt,false);
+});
+test('completion is timed, review freezes the clock, and five-minute tolerance is inclusive',()=>{
+  const active=reduce(withTask(),{type:'START_TASK',id:'math',now:1000});
+  const complete=(s,actualMinutes,now)=>reduce(s,{type:'RECORD_TASK',id:'math',status:'done',actualMinutes,now});
+  assert.equal(complete(active,10,600999),active);
+  const reviewed=reduce(active,{type:'REVIEW_TASK',id:'math',now:1201000});
+  assert.equal(reviewed.tasks[0].elapsedMs,1200000);
+  for(const value of [14,26,9])assert.equal(complete(reviewed,value,9000000),reviewed);
+  for(const value of [15,25]){const done=complete(reviewed,value,9000000);assert.equal(done.tasks[0].status,'done');assert.equal(done.tasks[0].reviewAt,1201000);assert.equal(done.tasks[0].elapsedMs,1200000);}
+});
+test('forgotten pause recovery preserves explanation and requires a fresh valid segment',()=>{
+  let s=reduce(withTask(),{type:'START_TASK',id:'math',now:1000});
+  s=reduce(s,{type:'RESET_TASK_TIMER',id:'math',note:'吃饭后忘记暂停',now:7201000});
+  assert.equal(s.tasks[0].timingCorrections[0].elapsedMs,7200000);
+  assert.equal(s.tasks[0].elapsedMs,0);
+  assert.equal(restoreState(serializeState(s)).corrupt,false);
+  assert.equal(reduce(s,{type:'RECORD_TASK',id:'math',status:'done',actualMinutes:10,now:9000000}),s);
+  assert.equal(reduce(s,{type:'CLAIM_REWARD',id:'math'}).coins,0);
+});
 const withTask = () => reduce(initialState(), { type: 'ADD_TASK', task, now: 1000 });
 const care = (targetId, verb, count = 0, now = 4000) => ({ type: 'CARE_SCENE', targetId, verb, expectedCount: count, careId: `care-test-${targetId}-${verb}-${now}`, now });
-function completed() { return reduce(withTask(), { type: 'RECORD_TASK', id: task.id, status: 'done', actualMinutes: 35, now: 2000 }); }
+function completed() { return reduce(reduce(withTask(),{type:'START_TASK',id:task.id,now:1000}), { type: 'RECORD_TASK', id: task.id, status: 'done', actualMinutes: 35, now: 2101000 }); }
 
 test('a completed real-world goal can claim its reward exactly once', () => {
   const done = completed();
@@ -55,7 +79,7 @@ test('construction is atomic: enough coins, valid unoccupied slot, no duplicate 
 });
 test('save restores completed tasks, balance, building choice and reflections together', () => {
   let state = reduce(completed(), { type: 'CLAIM_REWARD', id: task.id });
-  state = reduce(state, { type: 'BUILD', itemId: 'flowerbed', slot: 'window', now: 5000 });
+  state = reduce(state, { type: 'BUILD', itemId: 'cat-tree', slot: 'window', now: 5000 });
   state = reduce(state, { type: 'REFLECT', id: task.id, answer: 'longer', now: 6000 });
   const loaded = restoreState(serializeState(state));
   assert.equal(loaded.corrupt, false);
@@ -76,7 +100,7 @@ test('malformed local tasks and duplicate buildings are rejected before renderin
     assert.equal(restoreState(JSON.stringify(raw)).corrupt,true,JSON.stringify(override));
   }
   assert.equal(restoreState(JSON.stringify({...base,tasks:[base.tasks[0],base.tasks[0]]})).corrupt,true);
-  const buildings=[{itemId:'flowerbed',slot:'sunny',builtAt:1000},{itemId:'cat-tree',slot:'sunny',builtAt:1000}];
+  const buildings=[{itemId:'cat-tree',slot:'window',builtAt:1000},{itemId:'cat-tree',slot:'sunny',builtAt:1000}];
   assert.equal(restoreState(JSON.stringify({...base,buildings})).corrupt,true);
   assert.equal(restoreState(JSON.stringify({...base,reflections:[null]})).corrupt,true);
 });

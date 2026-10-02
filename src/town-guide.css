@@ -1,0 +1,21 @@
+.guide-friend{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+.guide-friend img{width:82px;height:82px;object-fit:contain;flex-shrink:0}
+.guide-friend p{font-size:13px;line-height:1.7;color:#776b53}.guide-friend strong{display:block;font-size:18px;color:#514b36}
+.guide-loop{padding:0;list-style:none;display:grid;gap:17px;margin:18px 0}
+.guide-loop li{display:flex;gap:13px;align-items:flex-start}.guide-loop svg{color:#768365;flex-shrink:0;margin-top:2px}
+.guide-loop strong,.guide-loop span,.guide-gift strong,.guide-gift span{display:block}.guide-loop strong{font-size:15px}.guide-loop span{font-size:13px;line-height:1.75;color:#7d735e;margin-top:3px}
+.guide-gift{display:flex;gap:10px;align-items:center;padding:13px;border:1px solid #dfca90;background:#fff1c9;border-radius:14px;margin:20px 0 10px}.guide-gift img{width:34px;height:34px;object-fit:contain}.guide-gift strong{font-size:13px;color:#6c5528}.guide-gift span{font-size:11px;line-height:1.7;color:#7d6c49;margin-top:4px}
+.guide-reassurance{font-size:13px;line-height:1.85;color:#7c735e;margin:16px 0}.guide-footnote{font-size:12px;line-height:1.6;text-align:center;color:#887d65;margin-top:5px}
+.guide-checkpoints{padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 24px}.guide-checkpoints li{display:flex;align-items:center;gap:8px;font-size:13px;color:#8b816a}.guide-checkpoints li>span{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#e8e3d1}.guide-checkpoints .done{color:#5d7c4f}
+.guide-next{padding:18px;background:#eeefdf;border-radius:16px}.guide-next h3{font-size:20px;line-height:1.5;margin:10px 0}.guide-next p{font-size:14px;line-height:1.85;margin-bottom:18px;color:#756c55}
+.journey-toggle.guide-toggle{max-width:min(330px,46%)}.guide-toggle span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.guide-toggle svg{flex-shrink:0}
+.plan-first-note{padding:12px 14px;background:#eeefdf;border-radius:12px;font-size:13px;line-height:1.8;margin-bottom:15px}
+.guide-example-note{font-size:12px;color:#887b61;line-height:1.8;margin-top:8px}
+.task-examples button{min-height:44px}.guide-replay{margin-bottom:18px}
+.task-record-dialog .record-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.task-record-dialog .record-options button{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:5px;padding:10px 6px;min-height:92px}
+.task-record-dialog .record-options button span{font-size:11px;line-height:1.5}
+.task-record-dialog .record-options button strong{font-size:13px}
+.task-record-dialog .task-form+.secondary-button{margin-top:12px}
+.task-record-dialog .comparison{margin:16px 0}.task-record-dialog .guide-reassurance{margin:10px 0}
+@media(max-width:600px){.guide-friend strong{font-size:16px}.guide-friend img{width:64px;height:64px}.guide-loop{gap:12px}.guide-friend{margin-bottom:12px}.guide-toggle{font-size:12px}}

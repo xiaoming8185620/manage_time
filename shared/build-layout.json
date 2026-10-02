@@ -1,0 +1,10 @@
+{
+  "slots": [
+    {"id":"sunny","name":"靠近阳光的地方","x":0.665,"y":0.555},
+    {"id":"window","name":"小屋前的小角落","x":0.328,"y":0.655},
+    {"id":"garden","name":"花园旁的空地","x":0.756,"y":0.602},
+    {"id":"porch-bed","name":"西侧栏杆内缘","x":0.31,"y":0.635,"itemId":"flowerbed"},
+    {"id":"east-bed","name":"东侧花箱前缘","x":0.72,"y":0.60,"itemId":"flowerbed"}
+  ],
+  "flowerSlots": ["porch-bed", "east-bed"]
+}

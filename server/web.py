@@ -166,6 +166,12 @@ def create_app(data_dir, client_dir, config_path, clock=None, weather_fetcher=No
     def actions():
         return jsonify(store.command(g.user['id'], body(), now()))
 
+    @app.post('/api/visit')
+    @auth('child')
+    def visit():
+        # The server clock and stored receipts decide the day and amount.
+        return jsonify(store.visit(g.user['id'], now()))
+
     @app.post('/api/import')
     @auth('child')
     def import_save():

@@ -26,6 +26,6 @@
   {"id":"engine","name":"悬浮推进器","kind":"facility","x":0.405,"y":0.929,"w":0.17,"h":0.07,"cost":3,"freeLabel":"听听轻鸣","paidLabel":"擦亮外壳","reply":"嗡——推进器低低地哼着，小镇稳稳浮在云上。","careReply":"外壳焕然一新，星球悬浮小镇又多了一处亮色。"},
   {"id":"cat-nest","name":"小乖的软垫窝","kind":"facility","x":0.166,"y":0.477,"w":0.07,"h":0.074,"cost":2,"freeLabel":"拍拍软垫","paidLabel":"整理软垫","reply":"软垫轻轻弹回来，这里适合做个美梦。","careReply":"软垫蓬松又整洁，小乖有了舒服的午睡角落。"},
   {"id":"xiaoguai","name":"小乖","kind":"pet","x":0.4,"y":0.62,"w":0.07,"h":0.08,"cost":2,"freeLabel":"陪它玩一会儿","paidLabel":"给小乖梳毛","reply":"小乖蹭了蹭你，尾巴开心地晃起来。","careReply":"梳掉浮毛，小乖舒服地眯起了眼睛。"},
-  {"id":"built-flowerbed","name":"我的小花圃","kind":"plant","style":"foliage","itemId":"flowerbed","w":0.12,"h":0.09,"cost":3},
+  {"id":"built-flowerbed","name":"我的小花圃","kind":"plant","style":"foliage","itemId":"flowerbed","w":0.12,"h":0.09,"cost":3,"retired":true},
   {"id":"built-cat-tree","name":"小乖的猫爬架","kind":"facility","itemId":"cat-tree","w":0.1,"h":0.12,"cost":2,"freeLabel":"陪小乖看看","paidLabel":"打理猫爬架","reply":"小乖闻了闻爬柱，又找到了喜欢的角落。","careReply":"垫子和爬柱整理好了，陪伴的角落也被好好照顾。"}
 ]

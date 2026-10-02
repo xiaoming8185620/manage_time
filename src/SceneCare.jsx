@@ -1,10 +1,11 @@
+import {HabitatArt} from './HabitatArt';
 import {growthItem,growthRecord,growthQuote,workshopGrowthSpent} from '../shared/workshop-growth';
 import {WorkshopGrowthArt} from './WorkshopGrowth';
 import React, { useState } from 'react';
 import { Leaf, Drop, Sparkle, PawPrint, Wrench, Check, ArrowRight, Eye, Heart } from '@phosphor-icons/react';
 import { availableCareTargets, careRecord, careReason, CARE_LEVELS, careSpent } from '../shared/scene-care.js';
 import { dayKey } from '../shared/calendar.js';
-import { BUILD_SLOTS } from './game.js';
+import { buildingPosition } from './game.js';
 import './scene-care.css';
 import { PlantGrowth, PlantPreview } from './PlantSprites';
 import { GreenhouseArt } from './GreenhouseArt';
@@ -15,7 +16,7 @@ export function sceneTarget(target, state, position) {
   if (position) return { ...target, ...position };
   if (!target.itemId) return target;
   const building = state.buildings.find(b => b.itemId === target.itemId);
-  const slot = BUILD_SLOTS.find(s => s.id === building?.slot);
+  const slot = buildingPosition(building, state.buildings);
   return { ...target, x: slot?.x ?? .5, y: (slot?.y ?? .5) - .045, floorY: slot?.y ?? .5 };
 }
 const IconFor = ({ target, ...props }) => target.kind === 'plant' ? <Leaf {...props} /> : target.kind === 'pet' ? <PawPrint {...props} /> : <Wrench {...props} />;
@@ -40,6 +41,7 @@ export function SceneCareLayer({ state, onOpen, disabled, hints, paused, effect,
 function CarePreview({ target, level }) {
   if (target.kind === 'plant') return <div className="care-preview plant-stage-preview"><PlantPreview target={target} level={level} /><span className="care-stage-label"><Leaf size={15} />{CARE_LEVELS[level]}</span></div>;
   if (growthItem(target.id)) return <div className="care-preview workshop-preview"><WorkshopGrowthArt kind={growthItem(target.id).art}/></div>;
+  if (target.image) return <div className="care-preview addition-preview"><HabitatArt item={target}/></div>;
   if (target.scene === 'workshop') return <div className="care-preview workshop-preview"><WorkshopArt kind={target.art}/></div>;
   if (target.scene === 'greenhouse') return <div className="care-preview gh-preview"><GreenhouseArt animal={target.spriteRow} column={target.habitatColumn}/></div>;
   const separate = target.kind === 'pet' ? '/assets/xiaoguai.png' : target.itemId ? `/assets/${target.itemId}.png` : null;

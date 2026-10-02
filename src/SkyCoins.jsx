@@ -22,11 +22,10 @@ function DroppedCoin({ id, point, origin = {x:.77,y:.20}, fresh, paused, disable
   const p = paused ? 1 : progress;
   const x = point.x + (origin.x - point.x) * (1 - p);
   const y = point.y + (origin.y - point.y) * (1 - p * p);
-  return <button type="button" className={`sky-coin ${selected ? 'is-targeted' : ''} ${paused ? 'life-paused' : ''}`} data-drop-id={id} data-landed={p === 1} data-targeted={!!selected} style={{left:`${x*100}%`,top:`${y*100}%`,zIndex:95}} disabled={disabled || p < 1} onClick={event => {event.stopPropagation(); onPickup(id);}} aria-busy={selected || undefined} aria-label={`拾起星球币${count > 1 ? `，这里有 ${count} 枚` : ''}`} title="走过去，拾起 1 星球币">
-    <img src="/assets/miaomiao-coin.png" alt="" draggable="false"/>
+  return <><div className={`sky-coin-visual ${paused ? 'life-paused' : ''}`} style={{left:`${x*100}%`,top:`${y*100}%`,zIndex:p<1?95:Math.round(y*100)-1}} aria-hidden="true"><img src="/assets/miaomiao-coin.png" alt="" draggable="false"/></div><button type="button" className={`sky-coin ${selected ? 'is-targeted' : ''} ${paused ? 'life-paused' : ''}`} data-drop-id={id} data-landed={p === 1} data-targeted={!!selected} style={{left:`${x*100}%`,top:`${y*100}%`,zIndex:95}} disabled={disabled || p < 1} onClick={event => {event.stopPropagation(); onPickup(id);}} aria-busy={selected || undefined} aria-label={`拾起星球币${count > 1 ? `，这里有 ${count} 枚` : ''}`} title="走过去，拾起 1 星球币">
     {count > 1 && <span className="sky-coin-count">{count}</span>}
     <span className="sky-coin-label">{selected ? '正在拾取…' : '拾起 +1'}</span>
-  </button>;
+  </button></>;
 }
 
 export function SkyCoins({ pending = [], paused, disabled, onPickup, selectedId }) {

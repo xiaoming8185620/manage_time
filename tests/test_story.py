@@ -22,14 +22,15 @@ class StoryTests(unittest.TestCase):
         self.store.close()
         self.temp.cleanup()
 
-    def act(self, action, **overrides):
+    def act(self, action, at=NOW, **overrides):
         payload=dict(action=action, operationId=str(uuid.uuid4()), revision=self.store.state('c')['revision']) | overrides
-        return self.store.command('c', payload, NOW)
+        return self.store.command('c', payload, at)
 
     def fund(self):
         for i in range(2):
             id=f'qa-{i}'
-            self.act(dict(type='ADD_TASK',task=dict(id=id,title='测试专用任务',estimate=10,category='学习',day='2026-09-28',startTime='')))
+            self.act(dict(type='ADD_TASK',task=dict(id=id,title='测试专用任务',estimate=10,category='学习',day='2026-09-28',startTime='')),at=NOW-600000)
+            self.act(dict(type='START_TASK',id=id),at=NOW-600000)
             self.act(dict(type='RECORD_TASK',id=id,status='done',actualMinutes=10))
             self.act(dict(type='CLAIM_REWARD',id=id))
 

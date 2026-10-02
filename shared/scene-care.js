@@ -8,9 +8,10 @@ const allTargets = [...targets, ...GREENHOUSE_TARGETS, ...WORKSHOP_TARGETS];
 export const CARE_TARGETS = allTargets;
 export const CARE_LEVELS = ['初生', '舒展', '繁茂', '盛放'];
 export const careTarget = id => allTargets.find(target => target.id === id);
-export const availableCareTargets = (state, scene = 'town') => allTargets.filter(target => !target.legacy && (target.scene || 'town') === scene && (!target.itemId || state.buildings.some(b => b.itemId === target.itemId)) && (!target.habitatId || state.habitats?.includes(target.habitatId)));
+export const availableCareTargets = (state, scene = 'town') => allTargets.filter(target => !target.legacy && !target.retired && (target.scene || 'town') === scene && (!target.itemId || state.buildings.some(b => b.itemId === target.itemId)) && (!target.habitatId || state.habitats?.includes(target.habitatId)));
 export const careRecord = (state, id) => ({ careCount: 0, waterCount: 0, interactionCount: 0, caredAt: null, wateredAt: null, interactedAt: null, lastEvent: null, ...state.care?.[id] });
 export function careReason(state, target, verb, now = Date.now()) {
+  if (target?.retired) return '这项建设已经下架，原有记录仍然保留。';
   if (!target || (target.itemId && !state.buildings.some(b => b.itemId === target.itemId))) return '先建好这处小天地，再来照料。';
   if (target.habitatId && !state.habitats?.includes(target.habitatId)) return '先建好这处栖息地，再来照料。';
   const record = careRecord(state, target.id);
