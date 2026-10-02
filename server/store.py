@@ -1,13 +1,18 @@
 import json
+import math
 import sqlite3
 import threading
 import uuid
 from contextlib import contextmanager, closing
 from pathlib import Path
-from .domain import Problem, initial_state, reduce_game, day_key, day_start, week_start, week_due, add_days, build_report, task_input, STATUSES, SLOTS, ITEMS
+from .domain import Problem, initial_state, reduce_game, day_key, day_start, week_start, week_due, add_days, build_report, task_input, STATUSES, ITEMS, valid_build_slot
 from .scene_care import restore_care, care_spent, care_detail
 from .story import restore_story, story_spent, story_detail
 from .sky_rewards import restore_sky_rewards, empty_sky_rewards
+from .greenhouse import restore_habitats, HABITATS
+from .workshop_growth import restore_growth,growth_spent,growth_detail
+from .animal_rewards import restore_animal_rewards, empty_animal_rewards, ANIMALS
+from .domain import restore_visit_days, guide_preferences
 
 
 class Store:
@@ -73,7 +78,26 @@ class Store:
 
     def state(self, user):
         row = self.one('SELECT revision,data FROM states WHERE user_id=?', (user,))
-        return dict(revision=row['revision'], state=json.loads(row['data']))
+        state = json.loads(row['data'])
+        return dict(revision=row['revision'], state=state, canImport=self.can_import(state))
+
+    @staticmethod
+    def can_import(state):
+        # Automatic arrival gifts and guide settings do not consume the one-time
+        # migration opportunity. Actual play progress is never overwritten.
+        return (not any(state.get(k) for k in ('importedAt','greeted','tasks','buildings','achievements','reflections','care','storyUnlocked','habitats','workshopGrowth'))
+                and state.get('coins', 0) == 10 * len(state.get('visitDays', []))
+                and state.get('skyRewards', empty_sky_rewards()) == empty_sky_rewards()
+                and state.get('animalRewards', empty_animal_rewards()) == empty_animal_rewards())
+
+    def visit(self, user, now):
+        with self.transaction():
+            current = self.state(user)
+            state = reduce_game(current['state'], {'type': 'VISIT_TOWN'}, now)
+            if state != current['state']:
+                self.write('UPDATE states SET data=?,revision=revision+1 WHERE user_id=?', (json.dumps(state), user))
+                self.event(user, now, 'DAILY_VISIT', detail=f'{day_key(now)} · 首次到访礼物 +10 星球币')
+            return {**self.state(user), 'visitDay': day_key(now)}
 
     def event(self, user, now, kind, task=None, detail=None):
         self.write('INSERT INTO events VALUES(?,?,?,?,?,?)', (str(uuid.uuid4()), user, now, kind, json.dumps(task) if task else None, detail))
@@ -90,6 +114,8 @@ class Store:
                 raise Problem('另一台设备更新了小镇，请按最新进度重试。', 409, current)
             action = payload.get('action')
             state = reduce_game(current['state'], action, now)
+            if action['type'] == 'VISIT_TOWN' and state != current['state']:
+                self.event(user, now, 'DAILY_VISIT', detail=f'{day_key(now)} · 首次到访礼物 +10 星球币')
             old_tasks = {t['id']: t for t in current['state']['tasks']}
             for task in state['tasks']:
                 old = old_tasks.get(task['id'])
@@ -98,12 +124,21 @@ class Store:
                     self.event(user, now, kind, task)
             if action['type'] in ('GREET', 'BUILD', 'REFLECT') and state != current['state']:
                 self.event(user, now, action['type'], detail=action.get('itemId') or action.get('answer'))
+            if action['type'] in ('UPGRADE_WORKSHOP','INTERACT_WORKSHOP') and state != current['state']:
+                self.event(user,now,action['type'],detail=growth_detail(action,state))
             if action['type'] == 'CARE_SCENE' and state != current['state']:
                 self.event(user, now, 'CARE_SCENE', detail=care_detail(action, state))
             if action['type'] == 'UNLOCK_STORY' and state != current['state']:
                 self.event(user, now, 'UNLOCK_STORY', detail=story_detail(action))
             if action['type'] == 'PICKUP_SKY_COIN' and state != current['state']:
                 self.event(user, now, 'PICKUP_SKY_COIN', detail='拾起云晶采集掉落的 1 星球币')
+            if action['type'] == 'PICKUP_ANIMAL_COIN' and state != current['state']:
+                coin = next(c for c in current['state']['animalRewards']['pending'] if c['id'] == action['id'])
+                name = ANIMALS[coin['animal']]['name']
+                self.event(user, now, 'PICKUP_ANIMAL_COIN', detail=f'拾起{name}留下的 1 星球币')
+            if action['type'] == 'BUILD_HABITAT' and state != current['state']:
+                item = HABITATS[action['habitatId']]
+                self.event(user, now, 'BUILD_HABITAT', detail=f"{item['name']} · 使用 {item['cost']} 星球币 · 永久建成")
             self.write('UPDATE states SET data=?,revision=revision+1 WHERE user_id=?', (json.dumps(state), user))
             self.write('INSERT INTO operations VALUES(?,?)', (op, user))
             return self.state(user)
@@ -112,34 +147,61 @@ class Store:
         if not isinstance(raw, dict) or raw.get('version') != 1 or not isinstance(raw.get('tasks'), list) or len(raw['tasks']) > 2000:
             raise Problem('这份存档无法读取。')
         state = initial_state(now)
+        def number(value, low=0, high=now):
+            if type(value) not in (int, float) or not math.isfinite(value) or not low <= value <= high:
+                raise ValueError()
+            return value
         try:
             for source in raw['tasks']:
                 if source['status'] not in STATUSES or not isinstance(source['id'], str) or not 1 <= len(source['id']) <= 80:
                     raise ValueError()
-                created = source.get('createdAt', now)
-                if not isinstance(created, (int, float)) or not 0 <= created <= now:
+                created = number(source.get('createdAt', now))
+                claimed = source.get('rewardClaimed', False)
+                if not isinstance(claimed, bool) or (claimed and source['status'] != 'done'):
                     raise ValueError()
-                t = {**task_input({**source, 'day': source.get('day') or day_key(created)}, now), 'id': source['id'], 'createdAt': created, 'status': 'paused' if source['status'] == 'active' else source['status'], 'startedAt': None, 'elapsedMs': max(0, min(float(source.get('elapsedMs', 0)), 31536000000)), 'rewardClaimed': bool(source.get('rewardClaimed')), 'note': str(source.get('note', ''))[:240], 'imported': True}
-                if t['status'] == 'done':
-                    actual = source['actualMinutes']
-                    finished = source['finishedAt']
-                    if not isinstance(actual, (int, float)) or not 1 <= actual <= 1440 or not isinstance(finished, (int, float)) or not created <= finished <= now:
+                elapsed = number(source.get('elapsedMs', 0), high=9007199254740991)
+                if source['status'] == 'active':
+                    # Leaving the page does not pause a task. Settle the active
+                    # segment on the server clock before importing it as paused.
+                    elapsed += now - number(source.get('startedAt'), low=created)
+                t = {**task_input({**source, 'day': source.get('day') or day_key(created)}, now, legacy=True), 'id': source['id'], 'createdAt': created, 'status': 'paused' if source['status'] == 'active' else source['status'], 'startedAt': None, 'elapsedMs': min(elapsed, 31536000000), 'rewardClaimed': claimed, 'note': str(source.get('note', ''))[:240], 'imported': True}
+                for key in ('firstStartedAt', 'reviewAt'):
+                    if key in source:
+                        t[key] = None if source[key] is None else number(source[key])
+                if 'timingCorrections' in source:
+                    corrections = source['timingCorrections']
+                    if not isinstance(corrections, list):
                         raise ValueError()
+                    t['timingCorrections'] = []
+                    for correction in corrections:
+                        if not isinstance(correction, dict) or not isinstance(correction.get('note'), str):
+                            raise ValueError()
+                        t['timingCorrections'].append(dict(at=number(correction['at']), elapsedMs=number(correction['elapsedMs'], high=9007199254740991), note=correction['note'][:240]))
+                if t['status'] == 'done':
+                    actual = number(source['actualMinutes'], 1, 525600)
+                    finished = number(source['finishedAt'], created)
                     t.update(actualMinutes=actual, finishedAt=finished)
                 if any(existing['id'] == t['id'] for existing in state['tasks']):
                     raise ValueError()
                 state['tasks'].append(t)
             buildings = raw.get('buildings', [])
-            if not isinstance(buildings, list) or len(buildings) > 2 or len({b['itemId'] for b in buildings}) != len(buildings) or len({b['slot'] for b in buildings}) != len(buildings):
+            if not isinstance(buildings, list) or len(buildings) > 2 or len({b['itemId'] for b in buildings}) != len(buildings):
                 raise ValueError()
             for b in buildings:
-                if b['itemId'] not in ITEMS or b['slot'] not in SLOTS:
+                if b['itemId'] not in ITEMS or not valid_build_slot(b['itemId'], b['slot']):
                     raise ValueError()
-                state['buildings'].append(dict(itemId=b['itemId'], slot=b['slot'], builtAt=min(float(b.get('builtAt', now)), now)))
-            state['care'] = restore_care(raw.get('care', {}), state['buildings'], now)
+                state['buildings'].append(dict(itemId=b['itemId'], slot=b['slot'], builtAt=number(b.get('builtAt', now))))
+            state['habitats'] = restore_habitats(raw.get('habitats', []))
+            state['care'] = restore_care(raw.get('care', {}), state['buildings'], now, state['habitats'])
+            state['workshopGrowth']=restore_growth(raw.get('workshopGrowth',{}),state['habitats'],now)
             state['storyUnlocked'] = restore_story(raw.get('storyUnlocked', []))
             state['skyRewards'] = restore_sky_rewards(raw.get('skyRewards', empty_sky_rewards()))
-            state['coins'] = state['skyRewards']['earned'] + 10 * sum(t['status'] == 'done' and t['rewardClaimed'] for t in state['tasks']) - 10 * len(buildings) - care_spent(state['care']) - story_spent(state['storyUnlocked'])
+            state['animalRewards'] = restore_animal_rewards(raw.get('animalRewards', empty_animal_rewards()))
+            state['visitDays'] = restore_visit_days(raw.get('visitDays', []), now)
+            state['onboarding'] = guide_preferences(raw)
+            state['coins'] = state['animalRewards']['earned'] + state['skyRewards']['earned'] + 10 * sum(t['status'] == 'done' and t['rewardClaimed'] for t in state['tasks']) - 10 * len(buildings) - care_spent(state['care']) - story_spent(state['storyUnlocked'])
+            state['coins'] += 10 * len(state['visitDays'])
+            state['coins'] -= sum(HABITATS[i]['cost'] for i in state['habitats']) + growth_spent(state)
             if state['coins'] < 0:
                 raise ValueError()
             state['greeted'] = bool(raw.get('greeted'))
@@ -149,9 +211,13 @@ class Store:
             raise Problem('存档中的任务或建设记录不完整。原文件不会被修改。')
         with self.transaction():
             current = self.state(user)
-            if current['revision']:
+            if not self.can_import(current['state']):
                 raise Problem('只可导入全新的小镇；已有进度不会被覆盖。', 409)
-            self.write('UPDATE states SET data=?,revision=1 WHERE user_id=?', (json.dumps(state), user))
+            merged_days = sorted(set(state['visitDays']) | set(current['state'].get('visitDays', [])))
+            state['coins'] += 10 * (len(merged_days) - len(state['visitDays']))
+            state['visitDays'] = merged_days
+            state['importedAt'] = now
+            self.write('UPDATE states SET data=?,revision=revision+1 WHERE user_id=?', (json.dumps(state), user))
             for task in state['tasks']:
                 self.event(user, now, 'IMPORT', task)
         return self.state(user)

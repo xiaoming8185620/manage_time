@@ -1,4 +1,6 @@
 """Pure domain functions. Timestamps are milliseconds; calendar dates use UTC+8."""
+import json
+from pathlib import Path
 import copy
 import math
 import re
@@ -6,12 +8,20 @@ from datetime import datetime, timedelta, timezone
 from .scene_care import reduce_care
 from .story import unlock_story
 from .sky_rewards import reduce_sky_rewards
+from .greenhouse import build_habitat
+from .animal_rewards import reduce_animal_rewards
+from .workshop_growth import reduce_growth
 
 TZ = timezone(timedelta(hours=8))
 CATEGORIES = ('学习', '运动', '社交', '生活', '休息')
 STATUSES = {'planned': '已安排', 'active': '进行中', 'paused': '已暂停', 'partial': '完成一部分', 'done': '已完成'}
-SLOTS = ('sunny', 'window', 'garden')
+BUILD_LAYOUT = json.loads((Path(__file__).resolve().parent.parent / 'shared/build-layout.json').read_text(encoding='utf-8'))
+SLOTS = tuple(s['id'] for s in BUILD_LAYOUT['slots'])
 ITEMS = ('cat-tree', 'flowerbed')
+
+
+def valid_build_slot(item, slot):
+    return any(s['id'] == slot and s.get('itemId', item) == item for s in BUILD_LAYOUT['slots'])
 
 
 class Problem(Exception):
@@ -50,13 +60,37 @@ def initial_state(now):
     return dict(version=1, greeted=False, coins=0, tasks=[], buildings=[], achievements=[], reflections=[], care={}, storyUnlocked=[], boy={'x': .505, 'y': .637}, createdAt=now, savedAt=None)
 
 
-def minutes(value, maximum=240):
-    if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value) or not 1 <= value <= maximum:
-        raise Problem(f'用时请填写 1—{maximum} 分钟。')
+def restore_visit_days(value, now):
+    if not isinstance(value, list) or len(value) > 36600:
+        raise ValueError('Invalid visit receipts')
+    for day in value:
+        try:
+            day_start(day)
+        except Problem as error:
+            raise ValueError('Invalid visit date') from error
+        if day > day_key(now):
+            raise ValueError('Future visit receipt')
+    if len(set(value)) != len(value):
+        raise ValueError('Duplicate visit receipt')
+    return sorted(value)
+
+
+def guide_preferences(state):
+    value = state.get('onboarding')
+    if 'onboarding' not in state:
+        return dict(introSeen=bool(state.get('greeted') or state.get('tasks')), dismissed=any(t.get('rewardClaimed') for t in state.get('tasks', [])))
+    if not isinstance(value, dict) or type(value.get('introSeen')) is not bool or type(value.get('dismissed')) is not bool:
+        raise ValueError('Invalid guide preferences')
+    return dict(introSeen=value['introSeen'], dismissed=value['dismissed'])
+
+
+def minutes(value, maximum=240, minimum=1):
+    if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value) or not minimum <= value <= maximum:
+        raise Problem(f'给自己留一点认真投入的时间吧。用时请填写 {minimum}—{maximum} 分钟。')
     return value
 
 
-def task_input(value, now):
+def task_input(value, now, legacy=False):
     if not isinstance(value, dict):
         raise Problem('任务内容不正确。')
     title = value.get('title', '')
@@ -70,7 +104,7 @@ def task_input(value, now):
     category = value.get('category') or '学习'
     if category not in CATEGORIES:
         raise Problem('任务分类不正确。')
-    return dict(title=title.strip(), estimate=minutes(value.get('estimate')), startTime=clock, category=category, day=day)
+    return dict(title=title.strip(), estimate=minutes(value.get('estimate'), minimum=1 if legacy else 10), startTime=clock, category=category, day=day)
 
 
 def elapsed(task, now):
@@ -79,6 +113,18 @@ def elapsed(task, now):
 
 def settle(task, now):
     task.update(elapsedMs=elapsed(task, now), startedAt=None)
+
+
+def completion_issue(task, actual, now):
+    ms = elapsed(task, now)
+    recorded = math.floor(ms / 60000 + .5)
+    if ms < 600000:
+        return '这一段计时还不到 10 分钟。给自己一点时间认真试试吧；也可以先记下做了一部分，投入的时间会保留。'
+    if isinstance(actual, bool) or not isinstance(actual, (int, float)) or not math.isfinite(actual) or not 10 <= actual <= 525600:
+        return '实际用时请填写至少 10 分钟的有效数字。先看看计时记录，再回想一下吧。'
+    if abs(actual - recorded) > 5:
+        return f'这一段累计计时约 {recorded} 分钟，和填写的用时相差超过 5 分钟。再回想一下吧；如果忘记暂停，可以如实补记，不用为了领奖改成不真实的数字。'
+    return ''
 
 
 def reduce_game(original, action, now):
@@ -94,7 +140,17 @@ def reduce_game(original, action, now):
         if name not in state['achievements']:
             state['achievements'].append(name)
 
-    if kind == 'GREET':
+    if kind == 'VISIT_TOWN':
+        day, days = day_key(now), state.get('visitDays', [])
+        if not any(d >= day for d in days):
+            state['visitDays'] = [*days, day]
+            state['coins'] += 10
+    elif kind == 'GUIDE_PREFERENCE':
+        if type(action.get('dismissed')) is not bool:
+            raise Problem('引导设置格式不正确。')
+        state['onboarding'] = dict(introSeen=True, dismissed=action['dismissed'])
+    elif kind == 'GREET':
+        state['onboarding'] = {**guide_preferences(state), 'introSeen': True}
         state['greeted'] = True
         earn('friend')
     elif kind == 'ADD_TASK':
@@ -120,7 +176,18 @@ def reduce_game(original, action, now):
                 if other['status'] == 'active':
                     settle(other, now)
                     other['status'] = 'paused'
-            task.update(status='active', startedAt=now)
+            task.update(status='active', startedAt=now, firstStartedAt=task.get('firstStartedAt') if task.get('firstStartedAt') is not None else now, reviewAt=None)
+    elif kind == 'REVIEW_TASK':
+        if task and task['status'] not in ('done', 'planned'):
+            settle(task, now)
+            task.update(status='paused', reviewAt=task.get('reviewAt') if task.get('reviewAt') is not None else now)
+    elif kind == 'RESET_TASK_TIMER':
+        if task and task['status'] != 'done' and elapsed(task, now) > 0:
+            note = action.get('note')
+            if not isinstance(note, str) or not note.strip():
+                raise Problem('写一句真实的情况吧，比如中间去吃饭，忘记暂停了。')
+            corrections = task.get('timingCorrections', []) + [dict(at=now, elapsedMs=elapsed(task, now), note=note[:240])]
+            task.update(status='partial', elapsedMs=0, startedAt=None, firstStartedAt=None, reviewAt=None, note=note[:240], timingCorrections=corrections)
     elif kind == 'PAUSE_TASK':
         if task and task['status'] == 'active':
             settle(task, now)
@@ -130,11 +197,17 @@ def reduce_game(original, action, now):
         if status not in ('partial', 'done'):
             raise Problem('进展状态不正确。')
         if task and task['status'] != 'done':
-            actual = minutes(action.get('actualMinutes'), 1440) if status == 'done' else None
+            actual = action.get('actualMinutes') if status == 'done' else None
+            if status == 'done':
+                issue = completion_issue(task, actual, now)
+                if issue:
+                    raise Problem(issue, 422)
             note = action.get('note') or ''
             if not isinstance(note, str):
                 raise Problem('备注格式不正确。')
             settle(task, now)
+            # reviewAt stops the effort clock; finishedAt is the confirmation
+            # receipt so a next-day submission appears in that day's journal.
             task.update(status=status, actualMinutes=actual, note=note[:240], finishedAt=now if status == 'done' else None)
     elif kind == 'CLAIM_REWARD':
         if task and task['status'] == 'done' and not task['rewardClaimed']:
@@ -142,10 +215,13 @@ def reduce_game(original, action, now):
             state['coins'] += 10
     elif kind == 'BUILD':
         item, slot = action.get('itemId'), action.get('slot')
-        if item in ITEMS and slot in SLOTS and state['coins'] >= 10 and not any(b['slot'] == slot or b['itemId'] == item for b in state['buildings']):
+        if item == 'cat-tree' and valid_build_slot(item, slot) and state['coins'] >= 10 and not any(b['itemId'] == 'cat-tree' for b in state['buildings']):
             state['coins'] -= 10
             state['buildings'].append(dict(itemId=item, slot=slot, builtAt=now))
             earn('build')
+    elif kind in ('UPGRADE_WORKSHOP','INTERACT_WORKSHOP'):
+        try: state=reduce_growth(state,action,now)
+        except ValueError as error: raise Problem(str(error))
     elif kind == 'CARE_SCENE':
         try:
             state = reduce_care(state, action, now, day_key)
@@ -158,6 +234,13 @@ def reduce_game(original, action, now):
             raise Problem(str(error))
     elif kind in ('COLLECT_CRYSTAL', 'PICKUP_SKY_COIN'):
         state = reduce_sky_rewards(state, action)
+    elif kind in ('ANIMAL_DROP', 'PICKUP_ANIMAL_COIN'):
+        state = reduce_animal_rewards(state, action)
+    elif kind == 'BUILD_HABITAT':
+        try:
+            state = build_habitat(state, action)
+        except ValueError as error:
+            raise Problem(str(error))
     elif kind == 'REFLECT':
         answer = action.get('answer')
         if task and task['status'] == 'done' and answer in ('faster', 'similar', 'longer') and not any(r['taskId'] == task['id'] for r in state['reflections']):

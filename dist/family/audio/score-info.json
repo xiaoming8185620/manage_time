@@ -1,0 +1,26 @@
+[
+  {
+    "scene": "town",
+    "bpm": 78,
+    "seconds": 73.846,
+    "peak": 0.4364,
+    "rms": 0.1,
+    "seam_delta": 0.00166
+  },
+  {
+    "scene": "greenhouse",
+    "bpm": 64,
+    "seconds": 90.0,
+    "peak": 0.388,
+    "rms": 0.1,
+    "seam_delta": 0.00282
+  },
+  {
+    "scene": "workshop",
+    "bpm": 88,
+    "seconds": 65.455,
+    "peak": 0.4644,
+    "rms": 0.1,
+    "seam_delta": 0.01048
+  }
+]

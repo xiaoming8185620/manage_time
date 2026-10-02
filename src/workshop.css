@@ -1,0 +1,48 @@
+.game-stage.workshop-stage{--scene-boy-width:10.8%}
+.workshop-stage .walk-surface{clip-path:polygon(27% 53.5%,67% 53.5%,84% 63%,78% 73%,35% 73%,17% 62%)}
+.game-stage.workshop-stage .actor.player-character{width:calc(var(--scene-boy-width) * var(--player-depth,1));transition:left var(--player-travel) linear,top var(--player-travel) linear,width var(--player-travel) linear}
+.workshop-art{display:block;position:relative;width:100%;overflow:hidden;pointer-events:none}
+.workshop-art>img{display:block;position:absolute;max-width:none;pointer-events:none}
+.workshop-object{position:absolute;transform:translate(-50%,-94%);border:0;padding:0;background:transparent;cursor:pointer;overflow:visible;border-radius:15%;transition:none}
+.workshop-object:active:not(:disabled){transform:translate(-50%,-94%)}
+.workshop-object:disabled{opacity:1}
+.workshop-object::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:max(100%,44px);height:max(100%,44px)}
+.workshop-facing{display:block;transform-origin:50% 94%;filter:drop-shadow(0 3px 2px #182d352c)}
+.workshop-dog .workshop-facing{filter:drop-shadow(0 3px 2px #182d3545)}
+.workshop-drone .workshop-art{transform:translateY(var(--drone-hover))}
+.workshop-brain .workshop-art{transform-origin:95% 55%;transform:rotate(var(--brain-tilt))}
+.workshop-earth.workshop-object{left:51.6%;top:40.7%;width:32.7%;z-index:30}
+.workshop-earth .earth-next{position:absolute;inset:0}
+.workshop-earth::after{width:83%;height:76%;top:44%}
+.workshop-name{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#fff7e9f2;border:1px solid #9eaa9e;color:#385754;padding:5px 9px;border-radius:10px;font-size:12px;white-space:nowrap;opacity:0;pointer-events:none}
+.workshop-object:hover .workshop-name,.workshop-object:focus-visible .workshop-name,.show-workshop-hint .workshop-name{opacity:1}
+.workshop-response{position:absolute;left:50%;bottom:105%;transform:translateX(-50%);width:220px;max-width:60vw;background:#fff9eef5;border:1px solid #97ad9c;border-radius:13px;color:#3c5d58;font-size:12px;line-height:1.7;padding:9px 12px;pointer-events:none;box-shadow:0 3px 12px #203b4322}
+.workshop-responding .workshop-name{display:none}
+.workshop-responding:not(.life-paused) .workshop-art{animation:workshop-hello 1.1s ease-in-out 3}
+.workshop-dog:not(.life-paused) .workshop-art{animation:workshop-dog-light 4s ease-in-out infinite}
+.workshop-dog.workshop-responding:not(.life-paused) .workshop-art{animation:workshop-dog-light 1.1s ease-in-out 3}
+@keyframes workshop-dog-light{50%{filter:brightness(1.07)}}
+@keyframes workshop-hello{50%{filter:brightness(1.12);transform:rotate(-2deg) translateY(-2px)}}
+.workshop-stair-occlusion{position:absolute;inset:0;width:100%;height:100%;z-index:81;pointer-events:none;clip-path:polygon(41.5% 78.3%,59.8% 78.3%,71% 100%,25.8% 100%)}
+.workshop-garden-occlusion{position:absolute;inset:0;width:100%;height:100%;z-index:81;pointer-events:none;clip-path:polygon(59.8% 78.3%,100% 68%,100% 100%,71% 100%)}
+.workshop-train-car{position:absolute;transform:translate(-50%,-94%);z-index:80;pointer-events:none}
+.workshop-train-hit{position:absolute;left:63%;top:62%;width:30%;height:31%;min-width:44px;min-height:44px;pointer-events:auto;background:none;border:0;padding:0;border-radius:15%}
+.workshop-train-hit:hover .workshop-name,.workshop-train-hit:focus-visible .workshop-name{opacity:1}
+.workshop-train-hit:disabled{pointer-events:none}
+.workshop-gate-occlusion{position:absolute;inset:0;width:100%;height:100%;z-index:20;pointer-events:none;clip-path:polygon(77% 0,94% 0,94% 54%,75% 51%,78% 35%)}
+.portal-to-workshop{left:39%;top:84%;width:18%;height:13%}
+.portal-to-workshop span{position:absolute;top:78%}
+.portal-workshop-return{left:42%;top:85%;width:15%;height:12%}
+.portal-workshop-return span{position:absolute;top:61%}
+.workshop-stage .scene-care-hotspot{z-index:47!important}
+.workshop-stage .care-launch{top:auto;bottom:17%}
+.workshop-stage .journal-launch{top:auto;bottom:24%}
+.workshop-stage .town-sign>svg,.workshop-stage .town-sign .sign-leaf{color:#466d70}
+.workshop-preview{display:flex;align-items:center;justify-content:center;background:#e6eeeb}
+.workshop-preview .workshop-art{width:155px;max-height:180px}
+.workshop-brief{padding:14px 16px;background:#e8efea;border:1px solid #c5d5cc;border-radius:13px;margin-bottom:15px;color:#3a625b}
+.workshop-brief strong{display:flex;align-items:center;gap:8px;font-size:14px}.workshop-brief p{font-size:13px;line-height:1.85;margin:9px 0}
+@container(max-width:600px){.workshop-name{font-size:10px;padding:4px 6px}.workshop-response{width:170px;font-size:11px}.portal-to-workshop span,.portal-workshop-return span{font-size:10px;padding:6px}.workshop-brain .workshop-response{left:0;transform:translateX(-72%)}}
+@media(max-width:520px){.workshop-stage .care-launch,.workshop-stage .journal-launch{bottom:-172px}.workshop-stage .portal-workshop-return{top:80%}.workshop-stage .portal-workshop-return span{top:85%}.workshop-stage .toast{z-index:180}}
+
+.owned-habitats{list-style:none;padding:0}.owned-habitats li{padding:12px 0;border-bottom:1px solid #e1dbc8;font-size:13px}.owned-habitats small{display:block;color:#587758;font-size:11px;margin-top:5px}

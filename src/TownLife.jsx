@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Heart } from '@phosphor-icons/react';
-import { BUILD_SLOTS, canWalk } from './game';
+import { buildingPosition, canWalk } from './game';
 
 export function TownAtmosphere({ paused }) {
   return <div className={`town-atmosphere ${paused ? 'life-paused' : ''}`} aria-hidden="true">
@@ -58,7 +58,7 @@ export function CatCompanion({ boy, greeted, paused, buildings, petSignal, petMo
   }
   function clearOfBuildings(point) {
     return canWalk(point.x, point.y) && !environment.current.buildings.some(b => {
-      const slot = BUILD_SLOTS.find(s => s.id === b.slot);
+      const slot = buildingPosition(b,environment.current.buildings);
       return Math.hypot((point.x - slot.x) / .07, (point.y - slot.y) / .06) < 1;
     });
   }

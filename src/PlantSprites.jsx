@@ -4,6 +4,10 @@ import { CARE_LEVELS } from '../shared/scene-care';
 import './plant-sprites.css';
 
 export function PlantCell({ frame, className = '' }) {
+  if (frame.crop) {
+    const [x,y,right,bottom]=frame.crop, [rx,ry]=frame.anchor;
+    return <span className={`plant-cell ${className}`} style={{'--root-x':`${frame.root[0]/627*100}%`,'--root-y':`${frame.root[1]/627*100}%`}}><img src={frame.src} alt="" draggable="false" style={{width:`${1448/480*100}%`,height:`${1086/480*100}%`,left:`${frame.root[0]/627*100-rx/480*100}%`,top:`${frame.root[1]/627*100-ry/480*100}%`,clipPath:`inset(${y/1086*100}% ${(1448-right)/1448*100}% ${(1086-bottom)/1086*100}% ${x/1448*100}%)`}}/></span>;
+  }
   return <span className={`plant-cell ${className}`} style={{ '--root-x':`${frame.root[0]/627*100}%`, '--root-y':`${frame.root[1]/627*100}%` }}><img src={frame.src} style={{ left:`-${frame.column*100}%`,top:`-${frame.row*100}%` }} alt="" draggable="false" /></span>;
 }
 export function PlantGrowth({ target, count, watered, paused }) {

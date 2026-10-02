@@ -1,0 +1,18 @@
+.scene-music{position:relative;align-self:center}
+.game-hud:has(.music-panel){z-index:125}
+.music-toggle.music-on{background:#e7eddb;color:#547857;border-color:#839573}
+.scene-music .music-toggle{min-width:44px;min-height:44px}
+.music-panel{position:absolute;right:0;top:calc(100% + 12px);width:260px;max-width:85vw;background:#fff7e9;color:#645b49;border:1px solid #ad9878;border-radius:14px;padding:13px 15px;box-shadow:0 8px 24px #283d3430;z-index:5;text-align:left}
+.music-heading{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#87785f;margin-bottom:7px}
+.music-heading button{width:44px;height:44px;display:grid;place-items:center;background:transparent;border-radius:50%}
+.music-panel>strong{display:block;font-size:16px;line-height:1.5}
+.music-panel p{font-size:11px;line-height:1.7;color:#8b7e65;margin:3px 0}
+.music-controls{display:flex;align-items:center;gap:10px;margin-top:12px}
+.music-play{display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:8px 11px;border-radius:9px;background:#e5ebdc;border:1px solid #a6b299;font-size:12px;white-space:nowrap}
+.music-controls>span{font-size:11px;line-height:1.5}
+.music-volume{display:flex;align-items:center;gap:9px;margin:7px 0;font-size:11px;min-height:44px}
+.music-volume input{width:100%;min-width:0;accent-color:#6c8866;height:28px}
+.music-volume output{min-width:31px;font-variant-numeric:tabular-nums}
+.music-sr{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+.music-panel .music-hint{font-size:10px;border-top:1px solid #e0d7c4;padding-top:8px;margin-top:0}
+@media(max-width:600px){.music-panel{position:fixed;right:12px;top:88px;width:250px}.music-heading button{width:44px;height:44px}}

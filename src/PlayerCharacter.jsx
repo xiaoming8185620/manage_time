@@ -16,7 +16,7 @@ const FRAMES = FRAME_METRICS.map(({ top, bottom, footX }, index) => {
   return { width: `${1254 * scale * 1.5}%`, left: `${50 - footX * scale * 1.5}%`, top: `${94 - bottom * scale}%`, clipPath: `inset(${50 - below}% ${right}% ${below}% ${50 - right}%)` };
 });
 
-export function PlayerCharacter({ position, moving, walkDuration, direction, paused, ready, blocked, greeted, taskActive }) {
+export function PlayerCharacter({ position, moving, walkDuration, direction, paused, ready, blocked, greeted, taskActive, depthScale=1 }) {
   const [action, setAction] = useState('idle');
   const [speech, setSpeech] = useState('');
   const timers = useRef(new Set());
@@ -63,7 +63,7 @@ export function PlayerCharacter({ position, moving, walkDuration, direction, pau
   return <button
     type="button"
     className={`actor boy player-character ${paused ? 'life-paused' : ''}`}
-    style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%`, zIndex: Math.round(position.y * 100), '--player-travel': `${walkDuration}ms` }}
+    style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%`, zIndex: Math.round(position.y * 100), '--player-travel': `${walkDuration}ms`, '--player-depth': depthScale }}
     data-action={moving && !paused ? 'walk' : action}
     data-facing={direction}
     aria-label="和主角打招呼"

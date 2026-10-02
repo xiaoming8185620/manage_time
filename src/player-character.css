@@ -1,4 +1,4 @@
-.actor.player-character{width:10.8%;padding:0;border:0;background:transparent;pointer-events:auto;overflow:visible;border-radius:35%;transform:translate(-50%,-94%);transition:left var(--player-travel) linear,top var(--player-travel) linear}
+.actor.player-character{width:10.8%;padding:0;border:0;background:transparent;pointer-events:auto;overflow:visible;border-radius:35%;transform:translate(-50%,-94%);transition:left var(--player-travel) linear,top var(--player-travel) linear,z-index var(--player-travel) linear}
 .actor.player-character:active:not(:disabled){transform:translate(-50%,-94%)}
 .player-character[aria-disabled=true]{pointer-events:none}
 .player-body{display:block;position:relative;width:100%;aspect-ratio:2/3;transform-origin:50% 94%;animation:player-breathe 4.6s ease-in-out infinite}

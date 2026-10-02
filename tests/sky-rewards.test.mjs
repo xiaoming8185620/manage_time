@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { gameReducer, initialState, restoreState, serializeState, canWalk } from '../src/game.js';
-import { COLLECTION_ENDS, crossedCollection, skyResumeTime, DROP_SPOTS } from '../shared/sky-rewards.js';
+import { COLLECTION_ENDS, crossedCollection, skyResumeTime, reconcileSkyClock, DROP_SPOTS } from '../shared/sky-rewards.js';
 import { skyVisitorsAt, advanceSkyClock } from '../shared/sky-life.js';
 
 test('exactly 30 out of 100 equally spaced rolls drop, without paying before pickup',()=>{
@@ -43,4 +43,14 @@ test('legacy saves restore; invalid or duplicate pending coins are rejected',()=
   for(const skyRewards of [null,{attempts:1,earned:0,pending:[1,1]},{attempts:1,earned:1,pending:[1]},{attempts:1,earned:0,pending:[2]}]) {
     assert.equal(restoreState(serializeState({...initialState(),skyRewards})).corrupt,true);
   }
+});
+test('cancelled collection resumes at the saved sequence so future drops are not rejected forever',()=>{
+  const cancelled=reconcileSkyClock(COLLECTION_ENDS[0]+32,1,0);
+  assert.equal(cancelled.completed,0);
+  assert.equal(crossedCollection(cancelled.time,COLLECTION_ENDS[0]+1,cancelled.completed),true);
+  const saved=gameReducer(initialState(),{type:'COLLECT_CRYSTAL',attempt:cancelled.completed+1,roll:0});
+  assert.equal(saved.skyRewards.attempts,1);
+  assert.deepEqual(saved.skyRewards.pending,[1]);
+  assert.deepEqual(reconcileSkyClock(50000,1,1),{time:50000,completed:1});
+  assert.deepEqual(reconcileSkyClock(50000,1,2),{time:skyResumeTime(2),completed:2});
 });

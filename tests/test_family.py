@@ -45,20 +45,22 @@ class StoreTests(unittest.TestCase):
         self.act(dict(type='PAUSE_TASK', id='math'), MONDAY + 61000)
         self.act(dict(type='RECORD_TASK', id='math', status='partial', note='完成前四题'), MONDAY + 62000)
         self.assertEqual(self.store.state('c')['state']['tasks'][0]['elapsedMs'], 60000)
-        self.act(dict(type='RECORD_TASK', id='math', status='done', actualMinutes=35), MONDAY + 100000)
+        self.act(dict(type='START_TASK', id='math'), MONDAY + 100000)
+        self.act(dict(type='RECORD_TASK', id='math', status='done', actualMinutes=35), MONDAY + 2140000)
         identifier = str(uuid.uuid4())
         first = self.act(dict(type='CLAIM_REWARD', id='math'), op=identifier)
         replay = self.act(dict(type='CLAIM_REWARD', id='math'), op=identifier, revision=0)
         self.assertEqual(first, replay)
         self.act(dict(type='CLAIM_REWARD', id='math'))
         self.assertEqual(self.store.state('c')['state']['coins'], 10)
-        self.assertEqual(self.store.report('c', '2026-09-21', '2026-09-21', MONDAY + 200000)['completedCount'], 1)
+        self.assertEqual(self.store.report('c', '2026-09-21', '2026-09-21', MONDAY + 2200000)['completedCount'], 1)
 
     def test_daily_snapshot_does_not_change_when_tomorrow_changes(self):
         self.task()
         self.act(dict(type='RECORD_TASK', id='math', status='partial', note='先做四题'), MONDAY + 1000)
         self.act(dict(type='EDIT_TASK', id='math', task={**TASK, 'title': '剩下两题', 'day': '2026-09-22'}), MONDAY + 86400000)
-        self.act(dict(type='RECORD_TASK', id='math', status='done', actualMinutes=15), MONDAY + 86460000)
+        self.act(dict(type='START_TASK', id='math'), MONDAY + 86400000)
+        self.act(dict(type='RECORD_TASK', id='math', status='done', actualMinutes=15), MONDAY + 87300000)
         old = self.store.report('c', '2026-09-21', '2026-09-21', MONDAY + 2 * 86400000)
         self.assertEqual(old['tasks'][0]['title'], '数学前六题')
         self.assertEqual(old['tasks'][0]['status'], 'partial')
@@ -164,12 +166,12 @@ class StoreTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which('node'), 'Node only needed for frontend/backend contract check')
     def test_python_and_existing_javascript_game_rules_agree(self):
-        actions = [dict(type='GREET'), dict(type='ADD_TASK', task=TASK), dict(type='START_TASK', id='math'), dict(type='PAUSE_TASK', id='math'), dict(type='EDIT_TASK', id='math', task={**TASK, 'estimate': 20}), dict(type='START_TASK', id='math'), dict(type='RECORD_TASK', id='math', status='partial', note='先做到这里'), dict(type='START_TASK', id='math'), dict(type='RECORD_TASK', id='math', status='done', actualMinutes=25, note='完成了'), dict(type='CLAIM_REWARD', id='math'), dict(type='CLAIM_REWARD', id='math'), dict(type='BUILD', itemId='cat-tree', slot='sunny'), dict(type='REFLECT', id='math', answer='longer')]
-        actions += [dict(type='CARE_SCENE', targetId='rail-west', verb='water', careId='contract-water-001'), dict(type='ADD_TASK', task={**TASK, 'id': 'second'}), dict(type='RECORD_TASK', id='second', status='done', actualMinutes=10), dict(type='CLAIM_REWARD', id='second')]
+        actions = [dict(type='GREET'), dict(type='ADD_TASK', task=TASK), dict(type='START_TASK', id='math'), dict(type='PAUSE_TASK', id='math'), dict(type='EDIT_TASK', id='math', task={**TASK, 'estimate': 20}), dict(type='START_TASK', id='math'), dict(type='RECORD_TASK', id='math', status='partial', note='先做到这里'), dict(type='START_TASK', id='math'), dict(type='RECORD_TASK', id='math', status='done', actualMinutes=30, note='完成了'), dict(type='CLAIM_REWARD', id='math'), dict(type='CLAIM_REWARD', id='math'), dict(type='BUILD', itemId='cat-tree', slot='sunny'), dict(type='REFLECT', id='math', answer='longer')]
+        actions += [dict(type='CARE_SCENE', targetId='rail-west', verb='water', careId='contract-water-001'), dict(type='ADD_TASK', task={**TASK, 'id': 'second'}), dict(type='START_TASK',id='second'), dict(type='RECORD_TASK', id='second', status='done', actualMinutes=10), dict(type='CLAIM_REWARD', id='second')]
         actions += [dict(type='CARE_SCENE', targetId='rail-west', verb='care', expectedCount=i, careId=f'contract-care-00{i}') for i in range(3)]
         state = initial_state(MONDAY)
         for i, action in enumerate(actions):
-            action['now'] = MONDAY + i * 60000
+            action['now'] = MONDAY + i * 600000
             state = reduce_game(state, action, action['now'])
         script = "import{initialState,gameReducer}from'./src/game.js';let input=JSON.parse(process.argv[1]);let state={...initialState(),createdAt:input.now};for(const a of input.actions)state=gameReducer(state,a);console.log(JSON.stringify(state));"
         value = subprocess.check_output(['node', '--input-type=module', '-e', script, json.dumps(dict(now=MONDAY, actions=actions))], cwd=ROOT)

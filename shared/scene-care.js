@@ -1,14 +1,21 @@
+import {growthItem} from './workshop-growth.js';
 import targets from './scene-care.json' with { type: 'json' };
 import { dayKey } from './calendar.js';
+import { GREENHOUSE_TARGETS } from './greenhouse.js';
+import { WORKSHOP_TARGETS } from './workshop.js';
+const allTargets = [...targets, ...GREENHOUSE_TARGETS, ...WORKSHOP_TARGETS];
 
-export const CARE_TARGETS = targets;
+export const CARE_TARGETS = allTargets;
 export const CARE_LEVELS = ['初生', '舒展', '繁茂', '盛放'];
-export const careTarget = id => targets.find(target => target.id === id);
-export const availableCareTargets = state => targets.filter(target => !target.itemId || state.buildings.some(b => b.itemId === target.itemId));
+export const careTarget = id => allTargets.find(target => target.id === id);
+export const availableCareTargets = (state, scene = 'town') => allTargets.filter(target => !target.legacy && !target.retired && (target.scene || 'town') === scene && (!target.itemId || state.buildings.some(b => b.itemId === target.itemId)) && (!target.habitatId || state.habitats?.includes(target.habitatId)));
 export const careRecord = (state, id) => ({ careCount: 0, waterCount: 0, interactionCount: 0, caredAt: null, wateredAt: null, interactedAt: null, lastEvent: null, ...state.care?.[id] });
 export function careReason(state, target, verb, now = Date.now()) {
+  if (target?.retired) return '这项建设已经下架，原有记录仍然保留。';
   if (!target || (target.itemId && !state.buildings.some(b => b.itemId === target.itemId))) return '先建好这处小天地，再来照料。';
+  if (target.habitatId && !state.habitats?.includes(target.habitatId)) return '先建好这处栖息地，再来照料。';
   const record = careRecord(state, target.id);
+  if (verb === 'care' && growthItem(target.id)) return '请使用成长面板安装新部件，日常保养免费。';
   if (verb === 'care') {
     if (target.kind === 'plant' && record.careCount >= 3) return '已经长到盛放，可以继续免费浇水。';
     if (target.kind !== 'plant' && record.caredAt != null && dayKey(record.caredAt) === dayKey(now)) return '今天已经照料过了，明天再来就好。';
@@ -31,12 +38,13 @@ export function reduceCare(state, action, now) {
 }
 
 // Shared save shape stays compatible with version 1 towns that have no care data.
-export function restoreCare(raw = {}, buildings = [], now = Date.now()) {
+export function restoreCare(raw = {}, buildings = [], now = Date.now(), habitats = []) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid care records');
   const output = {};
   for (const [id, source] of Object.entries(raw)) {
     const target = careTarget(id);
     if (!target || !source || typeof source !== 'object' || (target.itemId && !buildings.some(b => b.itemId === target.itemId))) throw new Error('Invalid care target');
+    if (target.habitatId && !habitats.includes(target.habitatId)) throw new Error('Invalid habitat care');
     const record = careRecord({ care: { [id]: source } }, id);
     for (const key of ['careCount', 'waterCount', 'interactionCount']) if (!Number.isInteger(record[key]) || record[key] < 0 || record[key] > 100000) throw new Error('Invalid care count');
     if ((target.kind === 'plant' && (record.careCount > 3 || record.interactionCount)) || (target.kind !== 'plant' && record.waterCount)) throw new Error('Invalid care kind');
